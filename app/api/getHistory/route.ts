@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+/**
+ * GET /api/getHistory?username=...
+ * Returns all snapshots for the specified user, sorted by created_at ascending.
+ */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const username = searchParams.get("username");
@@ -13,6 +17,7 @@ export async function GET(request: Request) {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
+    // Important: ascending order means oldest snapshot is first, newest is last
     const { data, error } = await supabase
       .from("snapshots")
       .select("*")
