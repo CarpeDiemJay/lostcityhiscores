@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 // Metadata
 export const metadata: Metadata = {
-  title: "Lost City Hiscores Tracker",
+  title: "Lost City Player Progress Tracker",
   description: "Track your player stats in Lost City (2004Scape)",
 };
 
