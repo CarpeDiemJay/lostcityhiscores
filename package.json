@@ -14,7 +14,8 @@
     "next": "15.2.3",
     "html2canvas": "^1.4.1",
     "html-to-image": "^1.11.13",
-     "@supabase/supabase-js": "^2.0.0"
+    "@supabase/supabase-js": "^2.0.0",
+    "recharts": "^2.1.9"
   },
   "devDependencies": {
     "typescript": "^5",
