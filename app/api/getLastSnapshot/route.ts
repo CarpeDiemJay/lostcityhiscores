@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-  // Grab the most recent snapshot (descending by created_at)
+  // Get the most recent snapshot
   const { data, error } = await supabase
     .from("snapshots")
     .select("*")
@@ -25,8 +25,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // If none found, return null
   if (!data || data.length === 0) {
+    // No previous snapshots
     return NextResponse.json({ snapshot: null });
   }
 
