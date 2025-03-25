@@ -4,11 +4,26 @@ import { useState, useRef } from "react";
 import { toPng } from "html-to-image";
 
 interface SkillData {
-  type: number; // 0=Overall, 1=Attack, etc.
-  level: number; // skill level
-  rank: number; // rank
-  value: number; // XP * 10
-  date?: string; // optional last-updated
+  type: number;   // 0=Overall, 1=Attack, etc.
+  level: number;  // skill level
+  rank: number;   // rank
+  value: number;  // XP * 10
+  date?: string;  // optional last-updated
+}
+
+// For summary
+interface SummaryData {
+  totalXPGained: number;
+  changes: {
+    skillType: number;
+    oldXP: number;
+    newXP: number;
+    xpDiff: number;
+    oldLevel: number;
+    newLevel: number;
+    levelDiff: number;
+  }[];
+  lastSnapshotTime: string; // from Supabase snapshot's created_at
 }
 
 // Simple level-based progress
@@ -18,110 +33,27 @@ function calculateProgress(level: number): number {
 }
 
 // All icons are local. We reuse Stats_icon.png for Overall (type=0).
-const skillMeta: Record<
-  number,
-  { name: string; color: string; icon: string }
-> = {
-  0: {
-    name: "Overall",
-    color: "#4e73df",
-    icon: "/ui/Stats_icon.png",
-  },
-  1: {
-    name: "Attack",
-    color: "#e74c3c",
-    icon: "/ui/Attack_icon.png",
-  },
-  2: {
-    name: "Defence",
-    color: "#3498db",
-    icon: "/ui/Defence_icon.png",
-  },
-  3: {
-    name: "Strength",
-    color: "#2ecc71",
-    icon: "/ui/Strength_icon.png",
-  },
-  4: {
-    name: "Hitpoints",
-    color: "#e67e22",
-    icon: "/ui/Hitpoints_icon.png",
-  },
-  5: {
-    name: "Ranged",
-    color: "#27ae60",
-    icon: "/ui/Ranged_icon.png",
-  },
-  6: {
-    name: "Prayer",
-    color: "#f1c40f",
-    icon: "/ui/Prayer_icon.png",
-  },
-  7: {
-    name: "Magic",
-    color: "#9b59b6",
-    icon: "/ui/Magic_icon.png",
-  },
-  8: {
-    name: "Cooking",
-    color: "#e67e22",
-    icon: "/ui/Cooking_icon.png",
-  },
-  9: {
-    name: "Woodcutting",
-    color: "#795548",
-    icon: "/ui/Woodcutting_icon.png",
-  },
-  10: {
-    name: "Fletching",
-    color: "#607d8b",
-    icon: "/ui/Fletching_icon.png",
-  },
-  11: {
-    name: "Fishing",
-    color: "#3498db",
-    icon: "/ui/Fishing_icon.png",
-  },
-  12: {
-    name: "Firemaking",
-    color: "#e74c3c",
-    icon: "/ui/Firemaking_icon.png",
-  },
-  13: {
-    name: "Crafting",
-    color: "#9c27b0",
-    icon: "/ui/Crafting_icon.png",
-  },
-  14: {
-    name: "Smithing",
-    color: "#607d8b",
-    icon: "/ui/Smithing_icon.png",
-  },
-  15: {
-    name: "Mining",
-    color: "#795548",
-    icon: "/ui/Mining_icon.png",
-  },
-  16: {
-    name: "Herblore",
-    color: "#2ecc71",
-    icon: "/ui/Herblore_icon.png",
-  },
-  17: {
-    name: "Agility",
-    color: "#3498db",
-    icon: "/ui/Agility_icon.png",
-  },
-  18: {
-    name: "Thieving",
-    color: "#9c27b0",
-    icon: "/ui/Thieving_icon.png",
-  },
-  21: {
-    name: "Runecrafting",
-    color: "#f1c40f",
-    icon: "/ui/Runecrafting_icon.png",
-  },
+const skillMeta: Record<number, { name: string; color: string; icon: string }> = {
+  0: { name: "Overall", color: "#4e73df", icon: "/ui/Stats_icon.png" },
+  1: { name: "Attack", color: "#e74c3c", icon: "/ui/Attack_icon.png" },
+  2: { name: "Defence", color: "#3498db", icon: "/ui/Defence_icon.png" },
+  3: { name: "Strength", color: "#2ecc71", icon: "/ui/Strength_icon.png" },
+  4: { name: "Hitpoints", color: "#e67e22", icon: "/ui/Hitpoints_icon.png" },
+  5: { name: "Ranged", color: "#27ae60", icon: "/ui/Ranged_icon.png" },
+  6: { name: "Prayer", color: "#f1c40f", icon: "/ui/Prayer_icon.png" },
+  7: { name: "Magic", color: "#9b59b6", icon: "/ui/Magic_icon.png" },
+  8: { name: "Cooking", color: "#e67e22", icon: "/ui/Cooking_icon.png" },
+  9: { name: "Woodcutting", color: "#795548", icon: "/ui/Woodcutting_icon.png" },
+  10: { name: "Fletching", color: "#607d8b", icon: "/ui/Fletching_icon.png" },
+  11: { name: "Fishing", color: "#3498db", icon: "/ui/Fishing_icon.png" },
+  12: { name: "Firemaking", color: "#e74c3c", icon: "/ui/Firemaking_icon.png" },
+  13: { name: "Crafting", color: "#9c27b0", icon: "/ui/Crafting_icon.png" },
+  14: { name: "Smithing", color: "#607d8b", icon: "/ui/Smithing_icon.png" },
+  15: { name: "Mining", color: "#795548", icon: "/ui/Mining_icon.png" },
+  16: { name: "Herblore", color: "#2ecc71", icon: "/ui/Herblore_icon.png" },
+  17: { name: "Agility", color: "#3498db", icon: "/ui/Agility_icon.png" },
+  18: { name: "Thieving", color: "#9c27b0", icon: "/ui/Thieving_icon.png" },
+  21: { name: "Runecrafting", color: "#f1c40f", icon: "/ui/Runecrafting_icon.png" },
 };
 
 export default function Home() {
@@ -130,29 +62,15 @@ export default function Home() {
   const [data, setData] = useState<SkillData[] | null>(null);
   const [error, setError] = useState("");
 
-  // Summary data from local snapshot
-  const [summary, setSummary] = useState<null | {
-    totalXPGained: number;
-    changes: {
-      skillType: number;
-      oldXP: number;
-      newXP: number;
-      xpDiff: number;
-      oldLevel: number;
-      newLevel: number;
-      levelDiff: number;
-    }[];
-    lastSnapshotTime: string;
-  }>(null);
-
-  // Expand/collapse details
+  // This summary is now computed by comparing to the last snapshot from Supabase
+  const [summary, setSummary] = useState<SummaryData | null>(null);
   const [showDetails, setShowDetails] = useState(false);
 
   // For capturing screenshot
   const summaryRef = useRef<HTMLDivElement>(null);
 
-  // Fetch from your Lost City API
-  const fetchData = async () => {
+  // 1) Fetch from Lost City API
+  async function fetchData() {
     if (!username) return;
     setLoading(true);
     setError("");
@@ -160,14 +78,14 @@ export default function Home() {
     setSummary(null);
 
     try {
-      const res = await fetch(
-        `/api/hiscores?username=${encodeURIComponent(username)}`
-      );
+      // In your original code, you used /api/hiscores?username=...
+      // which is your own Next.js route proxying the Lost City API.
+      // If that's correct, keep it. Or directly call the Lost City API.
+      const res = await fetch(`/api/hiscores?username=${encodeURIComponent(username)}`);
       const json = await res.json();
 
       if (!Array.isArray(json) || json.length === 0) {
         setError("Player not found.");
-        setLoading(false);
         return;
       }
       setData(json);
@@ -177,85 +95,103 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  // Save current stats to localStorage
-  const saveCurrentStats = () => {
-    if (!data || !username) return;
-    const snapshot = {
-      timestamp: new Date().toISOString(),
-      stats: data,
-    };
-    localStorage.setItem(`lostCity_${username}`, JSON.stringify(snapshot));
-    alert(`Saved current stats for ${username}!`);
-  };
-
-  // Generate summary from local snapshot
-  const generateSummary = () => {
+  // 2) Save current stats to Supabase
+  async function saveCurrentStats() {
     if (!data || !username) {
-      setSummary(null);
+      alert("No data or username to save.");
       return;
     }
-    const stored = localStorage.getItem(`lostCity_${username}`);
-    if (!stored) {
-      alert(
-        `No previous snapshot found for "${username}". Please save your current stats first.`
-      );
-      return;
-    }
-
-    const oldSnapshot = JSON.parse(stored) as {
-      timestamp: string;
-      stats: SkillData[];
-    };
-
-    const oldData = oldSnapshot.stats;
-    const newData = data;
-
-    const oldOverall = oldData.find((s) => s.type === 0);
-    const newOverall = newData.find((s) => s.type === 0);
-
-    const oldTotalXP = oldOverall ? Math.floor(oldOverall.value / 10) : 0;
-    const newTotalXP = newOverall ? Math.floor(newOverall.value / 10) : 0;
-    const totalXPGained = newTotalXP - oldTotalXP;
-
-    const changes = [];
-    for (const skill of newData) {
-      const oldSkill = oldData.find((os) => os.type === skill.type);
-      if (!oldSkill) continue;
-
-      const newXP = Math.floor(skill.value / 10);
-      const oldXP = Math.floor(oldSkill.value / 10);
-      const xpDiff = newXP - oldXP;
-
-      const newLevel = skill.level;
-      const oldLevel = oldSkill.level;
-      const levelDiff = newLevel - oldLevel;
-
-      if (xpDiff > 0 || levelDiff > 0) {
-        changes.push({
-          skillType: skill.type,
-          oldXP,
-          newXP,
-          xpDiff,
-          oldLevel,
-          newLevel,
-          levelDiff,
-        });
+    try {
+      const res = await fetch("/api/saveStats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, stats: data }),
+      });
+      const result = await res.json();
+      if (result.error) {
+        alert("Error: " + result.error);
+      } else {
+        alert(`Saved current stats for ${username}!`);
       }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save stats.");
     }
-    changes.sort((a, b) => b.xpDiff - a.xpDiff);
+  }
 
-    setSummary({
-      totalXPGained,
-      changes,
-      lastSnapshotTime: oldSnapshot.timestamp,
-    });
-    setShowDetails(false);
-  };
+  // 3) Generate summary by retrieving last snapshot from Supabase, then comparing
+  async function generateSummary() {
+    if (!data || !username) {
+      alert("No new data or username to compare.");
+      return;
+    }
+    try {
+      // 3a) Fetch last snapshot
+      const res = await fetch(`/api/getLastSnapshot?username=${encodeURIComponent(username)}`);
+      const { snapshot, error } = await res.json();
+      if (error) {
+        alert("Error fetching last snapshot: " + error);
+        return;
+      }
+      if (!snapshot) {
+        alert(`No previous snapshot found for "${username}". Please save your current stats first.`);
+        return;
+      }
 
-  // Share summary
-  const shareSummary = async () => {
+      // 3b) Compare new data (data) to old snapshot (snapshot.stats)
+      const oldData: SkillData[] = snapshot.stats;
+      const newData: SkillData[] = data;
+
+      const oldOverall = oldData.find(s => s.type === 0);
+      const newOverall = newData.find(s => s.type === 0);
+      const oldTotalXP = oldOverall ? Math.floor(oldOverall.value / 10) : 0;
+      const newTotalXP = newOverall ? Math.floor(newOverall.value / 10) : 0;
+      const totalXPGained = newTotalXP - oldTotalXP;
+
+      // Build array of changes
+      const changes: SummaryData["changes"] = [];
+      for (const skill of newData) {
+        const oldSkill = oldData.find(os => os.type === skill.type);
+        if (!oldSkill) continue;
+
+        const newXP = Math.floor(skill.value / 10);
+        const oldXP = Math.floor(oldSkill.value / 10);
+        const xpDiff = newXP - oldXP;
+
+        const newLevel = skill.level;
+        const oldLevel = oldSkill.level;
+        const levelDiff = newLevel - oldLevel;
+
+        if (xpDiff > 0 || levelDiff > 0) {
+          changes.push({
+            skillType: skill.type,
+            oldXP,
+            newXP,
+            xpDiff,
+            oldLevel,
+            newLevel,
+            levelDiff,
+          });
+        }
+      }
+      changes.sort((a, b) => b.xpDiff - a.xpDiff);
+
+      setSummary({
+        totalXPGained,
+        changes,
+        lastSnapshotTime: snapshot.created_at, // from Supabase
+      });
+      setShowDetails(false);
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong generating summary.");
+    }
+  }
+
+  // 4) Share summary as an image
+  async function shareSummary() {
     if (!summaryRef.current) return;
     try {
       const dataUrl = await toPng(summaryRef.current);
@@ -276,26 +212,25 @@ export default function Home() {
       console.error("Sharing failed:", err);
       alert("Sorry, unable to share. Check console for details.");
     }
-  };
+  }
 
-  // Overall & last updated
-  const overall = data?.find((s) => s.type === 0);
+  // Basic info about current data
+  const overall = data?.find(s => s.type === 0);
   const apiLastUpdated = overall?.date || null;
 
-  // Determine if top 1000 / 100 / 50
+  // Rank badge for the current data
   const rankBadge = (() => {
     if (!overall) return null;
-    const r = overall.rank;
-    if (r <= 50) return "Top 50 Player";
-    if (r <= 100) return "Top 100 Player";
-    if (r <= 1000) return "Top 1000 Player";
+    if (overall.rank <= 50) return "Top 50 Player";
+    if (overall.rank <= 100) return "Top 100 Player";
+    if (overall.rank <= 1000) return "Top 1000 Player";
     return null;
   })();
 
   // Highest XP skill
   let highestXpSkill: { type: number; xp: number; level: number } | null = null;
   if (data) {
-    const nonOverall = data.filter((s) => s.type !== 0);
+    const nonOverall = data.filter(s => s.type !== 0);
     highestXpSkill = nonOverall.reduce(
       (acc, s) => {
         const xp = Math.floor(s.value / 10);
@@ -305,15 +240,14 @@ export default function Home() {
     );
   }
 
-  // Re-check rank in summary data for a badge as well
+  // Rank badge for the summary snapshot (optional)
   const summaryRankBadge = (() => {
     if (!data) return null;
-    const newOverall = data.find((s) => s.type === 0);
+    const newOverall = data.find(s => s.type === 0);
     if (!newOverall) return null;
-    const r = newOverall.rank;
-    if (r <= 50) return "Top 50 Player";
-    if (r <= 100) return "Top 100 Player";
-    if (r <= 1000) return "Top 1000 Player";
+    if (newOverall.rank <= 50) return "Top 50 Player";
+    if (newOverall.rank <= 100) return "Top 100 Player";
+    if (newOverall.rank <= 1000) return "Top 1000 Player";
     return null;
   })();
 
@@ -323,12 +257,7 @@ export default function Home() {
       <header className="max-w-5xl mx-auto px-4 mb-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center">
-            {/* Local homepage icon */}
-            <img
-              src="/ui/IMG_1296.png"
-              alt="Home Icon"
-              className="h-10 w-auto mr-3"
-            />
+            <img src="/ui/IMG_1296.png" alt="Home Icon" className="h-10 w-auto mr-3" />
             <h1 className="text-3xl font-bold text-[#c6aa54]">
               Lost City Hiscores Tracker
             </h1>
@@ -357,17 +286,13 @@ export default function Home() {
         {/* Intro if no data */}
         {!data && !error && !loading && (
           <section className="text-center my-12">
-            <h2 className="text-2xl font-bold mb-4">
-              Welcome to Lost City Player Stats!
-            </h2>
+            <h2 className="text-2xl font-bold mb-4">Welcome to Lost City Player Stats!</h2>
             <p className="mb-2">
-              Track your Lost City progress. Compare your stats from a previous
-              snapshot using local storage, so you can easily share your gains at
-              the end of the day!
+              Track your Lost City progress. Compare your stats from a previous snapshot using
+              Supabase, so you can easily share your gains at the end of the day!
             </p>
             <p className="mb-6">
-              Lost City is a free, open-source, community-run project. Play the
-              game at{" "}
+              Lost City is a free, open-source, community-run project. Play the game at{" "}
               <a
                 href="https://2004.lostcity.rs/title"
                 target="_blank"
@@ -381,12 +306,8 @@ export default function Home() {
           </section>
         )}
 
-        {loading && (
-          <p className="text-center text-yellow-400 mb-4">Loading...</p>
-        )}
-        {error && (
-          <p className="text-center text-red-500 mb-4">{error}</p>
-        )}
+        {loading && <p className="text-center text-yellow-400 mb-4">Loading...</p>}
+        {error && <p className="text-center text-red-500 mb-4">{error}</p>}
 
         {/* OVERVIEW CARD */}
         {data && overall && (
@@ -411,8 +332,7 @@ export default function Home() {
               </span>
             </p>
             <p>
-              Rank:{" "}
-              <span className="font-bold">{overall.rank.toLocaleString()}</span>
+              Rank: <span className="font-bold">{overall.rank.toLocaleString()}</span>
             </p>
             {highestXpSkill && (
               <p>
@@ -425,19 +345,17 @@ export default function Home() {
             )}
             {apiLastUpdated && (
               <p className="mt-2 text-sm text-gray-400">
-                Last Updated (API):{" "}
-                <span className="font-bold">{apiLastUpdated}</span>
+                Last Updated (API): <span className="font-bold">{apiLastUpdated}</span>
               </p>
             )}
           </div>
         )}
 
-        {/* SUMMARY CARD */}
+        {/* TRACKER CARD (Summary) */}
         {data && (
           <div className="bg-[#2c2f33] p-6 rounded-lg border border-[#c6aa54] mb-6 flex flex-col">
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-2xl font-bold text-[#c6aa54]">Summary</h2>
-              {/* If summary rank badge is available, show it here too */}
               {summary && summaryRankBadge && (
                 <span className="bg-[#c6aa54] text-black font-semibold text-xs py-1 px-2 rounded">
                   {summaryRankBadge}
@@ -451,10 +369,7 @@ export default function Home() {
                 className="px-3 py-2 bg-[#c6aa54] text-black font-semibold rounded hover:bg-yellow-400 flex items-center justify-center"
                 title="Save Current Stats"
               >
-                {/* Floppy disk emoji */}
-                <span role="img" aria-label="Save icon">
-                  💾
-                </span>
+                💾
               </button>
               <button
                 onClick={generateSummary}
@@ -462,14 +377,12 @@ export default function Home() {
               >
                 Generate Summary
               </button>
-              {/* We'll only show share if summary exists AND XP gained > 0 */}
               {summary && summary.totalXPGained > 0 && (
                 <button
                   onClick={shareSummary}
                   className="px-3 py-2 bg-green-600 text-white font-semibold rounded hover:bg-green-700 flex items-center justify-center"
                   title="Share Summary"
                 >
-                  {/* A nicer share SVG icon */}
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="w-5 h-5"
@@ -490,8 +403,7 @@ export default function Home() {
 
             {!summary && (
               <p className="text-sm text-gray-400">
-                No summary yet. Save your current stats, then generate a summary
-                to see your gains.
+                No summary yet. Save your current stats, then generate a summary to see your gains.
               </p>
             )}
 
@@ -502,12 +414,10 @@ export default function Home() {
                   Lost City Hiscores Tracker
                 </span>
 
-                {/* Basic info */}
                 <div className="mb-3">
                   <p className="font-semibold text-[#c6aa54] text-lg mb-1">
                     {username}'s Progress
                   </p>
-                  {/* If totalXPGained > 0, show XP. If 0, show waiting message */}
                   {summary.totalXPGained > 0 ? (
                     <p className="text-sm text-gray-300">
                       Gained{" "}
@@ -529,7 +439,6 @@ export default function Home() {
                   </p>
                 </div>
 
-                {/* Expand/collapse details */}
                 {!showDetails && (
                   <button
                     onClick={() => setShowDetails(true)}
@@ -570,8 +479,7 @@ export default function Home() {
                                 </p>
                               </div>
                               <p className="text-sm text-gray-300">
-                                +{change.levelDiff} levels (from{" "}
-                                {change.oldLevel} to {change.newLevel})
+                                +{change.levelDiff} levels (from {change.oldLevel} to {change.newLevel})
                               </p>
                               <p className="text-sm text-gray-400">
                                 +{change.xpDiff.toLocaleString()} XP
@@ -584,11 +492,9 @@ export default function Home() {
                   </>
                 )}
 
-                {/* Advertise share feature if XP > 0 */}
                 {summary.totalXPGained > 0 && (
                   <p className="text-xs text-green-400 mt-3">
-                    Don’t forget you can Share this summary to Discord, YouTube
-                    videos, or forum posts by clicking the share button above!
+                    Don’t forget you can Share this summary to Discord, YouTube videos, or forum posts by clicking the share button above!
                   </p>
                 )}
               </div>
