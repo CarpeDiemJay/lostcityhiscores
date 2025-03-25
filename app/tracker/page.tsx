@@ -11,30 +11,31 @@ import {
   ResponsiveContainer
 } from "recharts";
 
-// Basic shape of a snapshot
+/** Basic shape of skill data */
 interface SkillData {
-  type: number;
+  type: number;   // 0=Overall, 1=Attack, etc.
   level: number;
   rank: number;
   value: number;  // XP * 10
-  date?: string;
+  date?: string;  // optional
 }
 
+/** Each snapshot row from Supabase */
 interface Snapshot {
   id: number;
   username: string;
-  created_at: string; // e.g. "2025-03-25T06:06:17.123Z"
+  created_at: string;
   stats: SkillData[];
 }
 
-// We'll define a few time range presets
+/** Time range presets */
 const TIME_RANGES = [
   { label: "24h", days: 1 },
   { label: "7d", days: 7 },
   { label: "30d", days: 30 },
   { label: "90d", days: 90 },
   { label: "1y", days: 365 },
-  { label: "All", days: 99999 }, // effectively no limit
+  { label: "All", days: 99999 },
 ];
 
 export default function TrackerPage() {
@@ -43,16 +44,18 @@ export default function TrackerPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // The chosen timeframe (default 7d)
-  const [timeRangeDays, setTimeRangeDays] = useState<number>(7);
+  // The chosen timeframe (in days)
+  const [timeRangeDays, setTimeRangeDays] = useState<number>(7); // default 7d
 
   // Gains info
   const [xpGained, setXpGained] = useState<number>(0);
 
-  // Data for Recharts
+  // Chart data for Recharts
   const [chartData, setChartData] = useState<{ date: string; xp: number }[]>([]);
 
-  // 1) Fetch snapshots from /api/getHistory
+  /**
+   * Fetch snapshots from /api/getHistory for the given username
+   */
   async function fetchHistory() {
     if (!username) return;
     setLoading(true);
@@ -65,7 +68,7 @@ export default function TrackerPage() {
       if (json.error) {
         setError(json.error);
       } else {
-        // We expect snapshots to be sorted ascending by created_at
+        // We expect ascending order from the route
         setSnapshots(json.snapshots || []);
       }
     } catch (err) {
@@ -77,47 +80,42 @@ export default function TrackerPage() {
   }
 
   /**
-   * 2) Recompute Gains & chart data whenever snapshots or timeRangeDays changes.
-   * This effect is crucial for the filter to work.
+   * Whenever snapshots or timeRangeDays changes, filter snapshots,
+   * compute Gains, and build chart data.
    */
   useEffect(() => {
-    // If no snapshots, reset everything
     if (snapshots.length === 0) {
       setXpGained(0);
       setChartData([]);
       return;
     }
 
-    // 2a) Filter by time range
-    // We'll create a cutoff date: "Now - timeRangeDays"
+    // Create a cutoff date for the timeframe
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - timeRangeDays);
 
     let filtered = snapshots;
 
-    // Only filter if timeRangeDays < 99999 (which means "All")
+    // Only filter if timeRangeDays < 99999 (All)
     if (timeRangeDays < 99999) {
       filtered = snapshots.filter((snap) => {
         const snapDate = new Date(snap.created_at);
-        // If snapDate >= cutoff, it's within the timeframe
         return snapDate >= cutoff;
       });
     }
 
-    // If the filter results in zero snapshots, just reset
     if (filtered.length === 0) {
+      // No snapshots in this range
       setXpGained(0);
       setChartData([]);
       return;
     }
 
-    // 2b) Identify earliest vs. latest in filtered
-    // Because our /api/getHistory route sorts ascending,
-    // the earliest is filtered[0], the latest is filtered[filtered.length - 1]
+    // earliest = filtered[0], latest = filtered[filtered.length - 1]
     const earliest = filtered[0];
     const latest = filtered[filtered.length - 1];
 
-    // 2c) Gains: compare Overall XP
+    // Gains: Compare Overall XP
     const oldOverall = earliest.stats.find(s => s.type === 0);
     const newOverall = latest.stats.find(s => s.type === 0);
     const oldXP = oldOverall ? Math.floor(oldOverall.value / 10) : 0;
@@ -125,8 +123,7 @@ export default function TrackerPage() {
     const gained = newXP - oldXP;
     setXpGained(gained);
 
-    // 2d) Build chart data for each snapshot in "filtered"
-    // We'll just store (date, xp)
+    // Build chart data for Recharts
     const cData = filtered.map((snap) => {
       const overall = snap.stats.find(s => s.type === 0);
       const xpVal = overall ? Math.floor(overall.value / 10) : 0;
@@ -137,14 +134,30 @@ export default function TrackerPage() {
     });
     setChartData(cData);
 
-  }, [snapshots, timeRangeDays]); // triggers on any change to snapshots or timeRangeDays
+  }, [snapshots, timeRangeDays]);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white py-8">
-      <div className="max-w-5xl mx-auto px-4">
-        <h1 className="text-3xl font-bold mb-6">Tracker (Gains & Graph)</h1>
+      {/* HEADER (matching your original style) */}
+      <header className="max-w-5xl mx-auto px-4 mb-8">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center">
+            {/* Logo image from your original design */}
+            <img
+              src="/ui/IMG_1296.png"
+              alt="Home Icon"
+              className="h-10 w-auto mr-3"
+            />
+            <h1 className="text-3xl font-bold text-[#c6aa54]">
+              Lost City Hiscores Tracker
+            </h1>
+          </div>
+        </div>
+      </header>
 
-        {/* USERNAME + LOAD */}
+      {/* MAIN CONTENT */}
+      <main className="max-w-5xl mx-auto px-4">
+        {/* SEARCH INPUT & BUTTON */}
         <div className="flex items-center gap-2 mb-6">
           <input
             type="text"
@@ -161,12 +174,14 @@ export default function TrackerPage() {
           </button>
         </div>
 
-        {loading && <p className="text-yellow-400">Loading snapshots...</p>}
-        {error && <p className="text-red-500">{error}</p>}
+        {loading && <p className="text-yellow-400 mb-4">Loading snapshots...</p>}
+        {error && <p className="text-red-500 mb-4">{error}</p>}
 
-        {/* TIME RANGE SELECT */}
+        {/* TIME RANGE DROPDOWN */}
         <div className="flex items-center gap-2 mb-4">
-          <label htmlFor="timeRange" className="text-white">Time Range:</label>
+          <label htmlFor="timeRange" className="font-semibold">
+            Time Range:
+          </label>
           <select
             id="timeRange"
             value={timeRangeDays}
@@ -181,13 +196,15 @@ export default function TrackerPage() {
           </select>
         </div>
 
-        {/* GAINS BOX */}
-        <div className="bg-[#2c2f33] p-4 rounded mb-4 border border-[#c6aa54]">
-          <h2 className="text-xl font-bold text-[#c6aa54] mb-2">Gains</h2>
+        {/* GAINS BOX (same style as your summary cards) */}
+        <div className="bg-[#2c2f33] p-6 rounded-lg border border-[#c6aa54] mb-6">
+          <h2 className="text-2xl font-bold text-[#c6aa54] mb-2">Gains</h2>
           {xpGained > 0 ? (
-            <p>
-              You have gained <span className="font-bold">{xpGained.toLocaleString()}</span> Overall XP in
-              the last {timeRangeDays === 99999 ? "All Time" : `${timeRangeDays} days`}.
+            <p className="text-white">
+              You have gained{" "}
+              <span className="font-bold">{xpGained.toLocaleString()}</span>{" "}
+              Overall XP in the last{" "}
+              {timeRangeDays === 99999 ? "All Time" : `${timeRangeDays} days`}.
             </p>
           ) : (
             <p className="text-yellow-400">
@@ -196,9 +213,9 @@ export default function TrackerPage() {
           )}
         </div>
 
-        {/* CHART */}
-        <div className="bg-[#2c2f33] p-4 rounded border border-[#c6aa54]">
-          <h2 className="text-xl font-bold text-[#c6aa54] mb-2">Overall XP Graph</h2>
+        {/* CHART SECTION (same style as well) */}
+        <div className="bg-[#2c2f33] p-6 rounded-lg border border-[#c6aa54] mb-6">
+          <h2 className="text-2xl font-bold text-[#c6aa54] mb-2">Overall XP Graph</h2>
           {chartData.length === 0 ? (
             <p className="text-gray-400">No data to display for this timeframe.</p>
           ) : (
@@ -239,7 +256,7 @@ export default function TrackerPage() {
             </div>
           )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }
