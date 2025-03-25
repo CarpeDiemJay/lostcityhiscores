@@ -1,25 +1,33 @@
 "use client";
 
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { toPng } from "html-to-image";
 
+/**
+ * Represents a single skill's data from the hiscores API.
+ */
 interface SkillData {
-  type: number;   // 0=Overall, 1=Attack, etc.
-  level: number;  // skill level
-  rank: number;   // rank
-  value: number;  // XP * 10
-  date?: string;  // optional last-updated from Lost City
+  type: number;   // 0 = Overall, 1 = Attack, 2 = Defence, etc.
+  level: number;  // The skill level
+  rank: number;   // The player's rank for this skill
+  value: number;  // The skill's XP * 10
+  date?: string;  // Optional: last-updated timestamp from the API
 }
 
-// Represents one row from the "snapshots" table
+/**
+ * Represents one snapshot row from the "snapshots" table in Supabase.
+ */
 interface Snapshot {
   id: number;
   username: string;
-  created_at: string; // date string
-  stats: SkillData[];
+  created_at: string;  // e.g. "2025-03-25T06:06:17.123Z"
+  stats: SkillData[];  // Full skill data array
 }
 
-// Summary data once we compare new data to an old snapshot
+/**
+ * The structure of our summary data once we've compared
+ * newly fetched stats to a previously saved snapshot.
+ */
 interface SummaryData {
   totalXPGained: number;
   changes: {
@@ -31,68 +39,80 @@ interface SummaryData {
     newLevel: number;
     levelDiff: number;
   }[];
-  lastSnapshotTime: string; // from oldSnapshot.created_at
+  lastSnapshotTime: string;  // from the old snapshot's "created_at"
 }
 
-// Simple helper to show “X hours/minutes/days ago at <timestamp>”
+/**
+ * Calculates how long ago (days/hours/minutes) a given date was,
+ * returning a string like "7 hours, 32 minutes ago at 3/25/2025, 1:26:25 AM".
+ */
 function timeAgo(oldDate: Date): string {
   const now = new Date();
   const diffMs = now.getTime() - oldDate.getTime();
-  if (diffMs < 0) return "in the future";
+  if (diffMs < 0) {
+    return `in the future at ${oldDate.toLocaleString()}`;
+  }
 
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   const diffHrs = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
   const diffMins = Math.floor((diffMs / (1000 * 60)) % 60);
 
   const parts: string[] = [];
-  if (diffDays > 0) parts.push(`${diffDays} day${diffDays > 1 ? "s" : ""}`);
-  if (diffHrs > 0) parts.push(`${diffHrs} hour${diffHrs > 1 ? "s" : ""}`);
-  if (diffMins > 0) parts.push(`${diffMins} minute${diffMins > 1 ? "s" : ""}`);
+  if (diffDays > 0) parts.push(`${diffDays} day${diffDays !== 1 ? "s" : ""}`);
+  if (diffHrs > 0) parts.push(`${diffHrs} hour${diffHrs !== 1 ? "s" : ""}`);
+  if (diffMins > 0) parts.push(`${diffMins} minute${diffMins !== 1 ? "s" : ""}`);
 
   if (parts.length === 0) {
     return `just now at ${oldDate.toLocaleString()}`;
   }
 
-  return parts.join(", ") + ` ago at ${oldDate.toLocaleString()}`;
+  const agoString = parts.join(", ") + " ago";
+  return `${agoString} at ${oldDate.toLocaleString()}`;
 }
 
-// Example skill metadata
+/**
+ * A simple map of skill "type" to a name, color, and icon path.
+ * This allows us to render skill icons and colors in a more professional manner.
+ */
 const skillMeta: Record<number, { name: string; color: string; icon: string }> = {
-  0: { name: "Overall", color: "#4e73df", icon: "/ui/Stats_icon.png" },
-  1: { name: "Attack", color: "#e74c3c", icon: "/ui/Attack_icon.png" },
-  2: { name: "Defence", color: "#3498db", icon: "/ui/Defence_icon.png" },
-  3: { name: "Strength", color: "#2ecc71", icon: "/ui/Strength_icon.png" },
-  4: { name: "Hitpoints", color: "#e67e22", icon: "/ui/Hitpoints_icon.png" },
-  5: { name: "Ranged", color: "#27ae60", icon: "/ui/Ranged_icon.png" },
-  6: { name: "Prayer", color: "#f1c40f", icon: "/ui/Prayer_icon.png" },
-  7: { name: "Magic", color: "#9b59b6", icon: "/ui/Magic_icon.png" },
-  8: { name: "Cooking", color: "#e67e22", icon: "/ui/Cooking_icon.png" },
-  9: { name: "Woodcutting", color: "#795548", icon: "/ui/Woodcutting_icon.png" },
-  10: { name: "Fletching", color: "#607d8b", icon: "/ui/Fletching_icon.png" },
-  11: { name: "Fishing", color: "#3498db", icon: "/ui/Fishing_icon.png" },
-  12: { name: "Firemaking", color: "#e74c3c", icon: "/ui/Firemaking_icon.png" },
-  13: { name: "Crafting", color: "#9c27b0", icon: "/ui/Crafting_icon.png" },
-  14: { name: "Smithing", color: "#607d8b", icon: "/ui/Smithing_icon.png" },
-  15: { name: "Mining", color: "#795548", icon: "/ui/Mining_icon.png" },
-  16: { name: "Herblore", color: "#2ecc71", icon: "/ui/Herblore_icon.png" },
-  17: { name: "Agility", color: "#3498db", icon: "/ui/Agility_icon.png" },
-  18: { name: "Thieving", color: "#9c27b0", icon: "/ui/Thieving_icon.png" },
-  21: { name: "Runecrafting", color: "#f1c40f", icon: "/ui/Runecrafting_icon.png" },
+  0:  { name: "Overall",       color: "#4e73df", icon: "/ui/Stats_icon.png"      },
+  1:  { name: "Attack",        color: "#e74c3c", icon: "/ui/Attack_icon.png"     },
+  2:  { name: "Defence",       color: "#3498db", icon: "/ui/Defence_icon.png"    },
+  3:  { name: "Strength",      color: "#2ecc71", icon: "/ui/Strength_icon.png"   },
+  4:  { name: "Hitpoints",     color: "#e67e22", icon: "/ui/Hitpoints_icon.png"  },
+  5:  { name: "Ranged",        color: "#27ae60", icon: "/ui/Ranged_icon.png"     },
+  6:  { name: "Prayer",        color: "#f1c40f", icon: "/ui/Prayer_icon.png"     },
+  7:  { name: "Magic",         color: "#9b59b6", icon: "/ui/Magic_icon.png"      },
+  8:  { name: "Cooking",       color: "#e67e22", icon: "/ui/Cooking_icon.png"    },
+  9:  { name: "Woodcutting",   color: "#795548", icon: "/ui/Woodcutting_icon.png"},
+  10: { name: "Fletching",     color: "#607d8b", icon: "/ui/Fletching_icon.png"  },
+  11: { name: "Fishing",       color: "#3498db", icon: "/ui/Fishing_icon.png"    },
+  12: { name: "Firemaking",    color: "#e74c3c", icon: "/ui/Firemaking_icon.png" },
+  13: { name: "Crafting",      color: "#9c27b0", icon: "/ui/Crafting_icon.png"   },
+  14: { name: "Smithing",      color: "#607d8b", icon: "/ui/Smithing_icon.png"   },
+  15: { name: "Mining",        color: "#795548", icon: "/ui/Mining_icon.png"     },
+  16: { name: "Herblore",      color: "#2ecc71", icon: "/ui/Herblore_icon.png"   },
+  17: { name: "Agility",       color: "#3498db", icon: "/ui/Agility_icon.png"    },
+  18: { name: "Thieving",      color: "#9c27b0", icon: "/ui/Thieving_icon.png"   },
+  21: { name: "Runecrafting",  color: "#f1c40f", icon: "/ui/Runecrafting_icon.png"},
 };
 
-// A simple level-based progress bar fill
+/**
+ * Calculates a percentage for a progress bar, assuming max level is 99.
+ */
 function calculateProgress(level: number): number {
   if (level >= 99) return 100;
   return (level / 99) * 100;
 }
 
 export default function Home() {
+  // Basic states for searching a player
   const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<SkillData[] | null>(null);
   const [error, setError] = useState("");
 
-  // Summary data after comparing new data to a chosen snapshot
+  // Summary states
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [showDetails, setShowDetails] = useState(false);
 
@@ -104,10 +124,13 @@ export default function Home() {
   const [snapshotHistory, setSnapshotHistory] = useState<Snapshot[]>([]);
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<number | "latest" | "">("");
 
-  // For sharing screenshot
+  // For screenshot sharing
   const summaryRef = useRef<HTMLDivElement>(null);
 
-  // 1) Fetch from Lost City (or your own hiscores route)
+  /**
+   * Fetches the player's hiscores data from our Next.js API route,
+   * which may be proxying the Lost City server or another service.
+   */
   async function fetchData() {
     if (!username) return;
     setLoading(true);
@@ -116,34 +139,39 @@ export default function Home() {
     setSummary(null);
 
     try {
-      // Example: calling your Next.js route: /api/hiscores?username=...
-      const res = await fetch(`/api/hiscores?username=${encodeURIComponent(username)}`);
-      const json = await res.json();
+      const response = await fetch(`/api/hiscores?username=${encodeURIComponent(username)}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch player data.");
+      }
+      const json = await response.json();
 
       if (!Array.isArray(json) || json.length === 0) {
-        setError("Player not found.");
+        setError("Player not found or no data returned.");
         return;
       }
       setData(json);
 
-      // Re-enable save button
+      // Re-enable the Save button because we have fresh data
       setSaveDisabled(false);
 
-      // Fetch the full snapshot history
-      fetchHistory(username);
+      // Also fetch the player's snapshot history
+      await fetchHistory(username);
     } catch (err) {
       console.error(err);
-      setError("Something went wrong.");
+      setError("Something went wrong while fetching hiscores.");
     } finally {
       setLoading(false);
     }
   }
 
-  // 1b) Fetch snapshot history for the user
-  async function fetchHistory(user: string) {
+  /**
+   * Fetches the full snapshot history from Supabase
+   * so we can populate a dropdown for older snapshots.
+   */
+  async function fetchHistory(player: string) {
     try {
-      const res = await fetch(`/api/getHistory?username=${encodeURIComponent(user)}`);
-      const { snapshots, error } = await res.json();
+      const response = await fetch(`/api/getHistory?username=${encodeURIComponent(player)}`);
+      const { snapshots, error } = await response.json();
       if (error) {
         console.error("Error fetching snapshot history:", error);
         return;
@@ -155,31 +183,34 @@ export default function Home() {
     }
   }
 
-  // 2) Save new snapshot
+  /**
+   * Saves the current stats to Supabase by calling our "saveStats" route.
+   * Displays a tooltip upon success, then disables the Save button.
+   */
   async function saveCurrentStats() {
     if (!data || !username) {
       alert("No data or username to save.");
       return;
     }
     try {
-      const res = await fetch("/api/saveStats", {
+      const response = await fetch("/api/saveStats", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, stats: data }),
       });
-      const result = await res.json();
+      const result = await response.json();
       if (result.error) {
-        alert("Error: " + result.error);
+        alert(`Error saving stats: ${result.error}`);
       } else {
-        // Show tooltip
+        // Show a brief tooltip
         setShowSaveTooltip(true);
         setTimeout(() => setShowSaveTooltip(false), 3000);
 
-        // Disable save
+        // Disable the Save button until fresh data is fetched again
         setSaveDisabled(true);
 
-        // Re-fetch history to see the new snapshot
-        fetchHistory(username);
+        // Refresh the snapshot history so we can see our newly inserted snapshot
+        await fetchHistory(username);
       }
     } catch (err) {
       console.error(err);
@@ -187,20 +218,24 @@ export default function Home() {
     }
   }
 
-  // 3) Generate summary comparing new data to selected snapshot
+  /**
+   * Generates a summary by comparing the newly fetched "data" to either
+   * the "latest" snapshot or a user-selected snapshot from the dropdown.
+   */
   async function generateSummary() {
     if (!data || !username) {
-      alert("No new data or username to compare.");
+      alert("No data or username to compare.");
       return;
     }
 
-    // If user hasn't chosen a snapshot, or picks "latest", we fetch the last snapshot
     if (!selectedSnapshotId || selectedSnapshotId === "latest") {
+      // If user hasn't chosen a snapshot, or specifically wants "latest",
+      // we fetch the last snapshot from Supabase.
       try {
-        const res = await fetch(`/api/getLastSnapshot?username=${encodeURIComponent(username)}`);
-        const { snapshot, error } = await res.json();
+        const response = await fetch(`/api/getLastSnapshot?username=${encodeURIComponent(username)}`);
+        const { snapshot, error } = await response.json();
         if (error) {
-          alert("Error fetching last snapshot: " + error);
+          alert(`Error fetching latest snapshot: ${error}`);
           return;
         }
         if (!snapshot) {
@@ -213,7 +248,7 @@ export default function Home() {
         alert("Something went wrong generating summary.");
       }
     } else {
-      // Compare to the chosen snapshot from snapshotHistory
+      // Compare to the chosen snapshot from our local "snapshotHistory"
       const snap = snapshotHistory.find(s => s.id === Number(selectedSnapshotId));
       if (!snap) {
         alert("Snapshot not found in local history.");
@@ -223,7 +258,10 @@ export default function Home() {
     }
   }
 
-  // 3b) Actually do the comparison
+  /**
+   * Actually compares the newly fetched stats ("data") to a given old snapshot.
+   * Builds a "SummaryData" object that we store in `summary`.
+   */
   function compareDataToSnapshot(oldSnapshot: Snapshot) {
     if (!data) return;
 
@@ -237,6 +275,7 @@ export default function Home() {
     const totalXPGained = newTotalXP - oldTotalXP;
 
     const changes: SummaryData["changes"] = [];
+
     for (const skill of newData) {
       const oldSkill = oldData.find(os => os.type === skill.type);
       if (!oldSkill) continue;
@@ -271,13 +310,15 @@ export default function Home() {
     setShowDetails(false);
   }
 
-  // 4) Share summary as image
+  /**
+   * Captures a screenshot of the summary card and attempts to share it
+   * using the Web Share API. Falls back to opening a new tab if sharing is not supported.
+   */
   async function shareSummary() {
     if (!summaryRef.current) return;
     try {
       const dataUrl = await toPng(summaryRef.current);
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
+      const blob = await (await fetch(dataUrl)).blob();
       const file = new File([blob], "summary.png", { type: "image/png" });
 
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -291,13 +332,15 @@ export default function Home() {
       }
     } catch (err) {
       console.error("Sharing failed:", err);
-      alert("Sorry, unable to share. Check console for details.");
+      alert("Sorry, unable to share. Please check the console for details.");
     }
   }
 
-  // For rank badges, skill cards, etc.
+  // Basic info for the "Overview" card
   const overall = data?.find(s => s.type === 0);
   const apiLastUpdated = overall?.date || null;
+
+  // A quick way to find the skill with the highest XP (excluding Overall).
   const highestXpSkill = (() => {
     if (!data) return null;
     const nonOverall = data.filter(s => s.type !== 0);
@@ -311,11 +354,11 @@ export default function Home() {
     );
   })();
 
-  // Basic rank badge logic
+  // A simple rank badge for top 50, 100, 1000 players
   const rankBadge = (() => {
     if (!overall) return null;
-    if (overall.rank <= 50) return "Top 50 Player";
-    if (overall.rank <= 100) return "Top 100 Player";
+    if (overall.rank <= 50)   return "Top 50 Player";
+    if (overall.rank <= 100)  return "Top 100 Player";
     if (overall.rank <= 1000) return "Top 1000 Player";
     return null;
   })();
@@ -356,33 +399,57 @@ export default function Home() {
 
       {/* MAIN CONTENT */}
       <main className="max-w-5xl mx-auto px-4">
+        {/* Intro if no data yet and no error */}
         {!data && !error && !loading && (
           <section className="text-center my-12">
-            <h2 className="text-2xl font-bold mb-4">Welcome to Lost City Player Stats!</h2>
+            <h2 className="text-2xl font-bold mb-4">
+              Welcome to Lost City Player Stats!
+            </h2>
             <p className="mb-2">
-              Track your Lost City progress. Compare your stats from a previous snapshot using
-              Supabase, so you can easily share your gains at the end of the day!
+              Track your Lost City progress. Compare your stats from a previous snapshot
+              using a real database, so you can easily share your gains at the end of the day!
+            </p>
+            <p className="mb-6">
+              Lost City is a free, open-source, community-run project. (This site is not affiliated with Jagex.)
+              Play the game at{" "}
+              <a
+                href="https://2004.lostcity.rs/title"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 underline"
+              >
+                2004.lostcity.rs
+              </a>.
             </p>
           </section>
         )}
 
-        {loading && <p className="text-center text-yellow-400 mb-4">Loading...</p>}
-        {error && <p className="text-center text-red-500 mb-4">{error}</p>}
+        {loading && (
+          <p className="text-center text-yellow-400 mb-4">Loading, please wait...</p>
+        )}
+        {error && (
+          <p className="text-center text-red-500 mb-4">{error}</p>
+        )}
 
         {/* OVERVIEW CARD */}
         {data && overall && (
           <div className="bg-[#2c2f33] p-6 rounded-lg border border-[#c6aa54] mb-6 relative">
             <div className="flex justify-between items-start">
-              <h2 className="text-2xl font-bold text-[#c6aa54] mb-2">Overview</h2>
+              <h2 className="text-2xl font-bold text-[#c6aa54] mb-2">
+                Overview
+              </h2>
               {rankBadge && (
                 <span className="bg-[#c6aa54] text-black font-semibold text-xs py-1 px-2 rounded">
                   {rankBadge}
                 </span>
               )}
             </div>
-            <p className="text-lg mb-3 font-semibold">Player Name: {username}</p>
+            <p className="text-lg mb-3 font-semibold">
+              Player Name: {username}
+            </p>
             <p>
-              Total Level: <span className="font-bold">{overall.level}</span>
+              Total Level:{" "}
+              <span className="font-bold">{overall.level}</span>
             </p>
             <p>
               Total XP:{" "}
@@ -391,7 +458,10 @@ export default function Home() {
               </span>
             </p>
             <p>
-              Rank: <span className="font-bold">{overall.rank.toLocaleString()}</span>
+              Rank:{" "}
+              <span className="font-bold">
+                {overall.rank.toLocaleString()}
+              </span>
             </p>
             {highestXpSkill && (
               <p>
@@ -404,19 +474,20 @@ export default function Home() {
             )}
             {apiLastUpdated && (
               <p className="mt-2 text-sm text-gray-400">
-                Last Updated (API): <span className="font-bold">{apiLastUpdated}</span>
+                Last Updated (API):{" "}
+                <span className="font-bold">{apiLastUpdated}</span>
               </p>
             )}
           </div>
         )}
 
-        {/* SUMMARY CARD */}
+        {/* SUMMARY (TRACKER) CARD */}
         {data && (
           <div className="bg-[#2c2f33] p-6 rounded-lg border border-[#c6aa54] mb-6 flex flex-col">
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-2xl font-bold text-[#c6aa54]">Summary</h2>
 
-              {/* Snapshot dropdown */}
+              {/* Dropdown to pick an older snapshot or "latest" */}
               <select
                 className="bg-gray-800 text-white rounded px-2 py-1 text-sm"
                 value={selectedSnapshotId || ""}
@@ -435,7 +506,6 @@ export default function Home() {
                 <option value="latest">Latest</option>
                 {snapshotHistory.map((snap) => (
                   <option key={snap.id} value={snap.id}>
-                    {/* Format the date or show timeAgo if you prefer */}
                     {new Date(snap.created_at).toLocaleString()}
                   </option>
                 ))}
@@ -443,7 +513,7 @@ export default function Home() {
             </div>
 
             <div className="flex gap-2 mb-4">
-              {/* SAVE BUTTON */}
+              {/* SAVE BUTTON with tooltip */}
               <div className="relative">
                 <button
                   onClick={saveCurrentStats}
@@ -452,7 +522,6 @@ export default function Home() {
                     ${saveDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
                   title="Save Current Stats"
                 >
-                  {/* Disk emoji */}
                   💾
                 </button>
                 {showSaveTooltip && (
@@ -469,7 +538,7 @@ export default function Home() {
                 Generate Summary
               </button>
 
-              {/* Always show share, but disable if no summary */}
+              {/* Always show Share button; disable if no summary */}
               <button
                 onClick={shareSummary}
                 disabled={!summary}
@@ -477,7 +546,7 @@ export default function Home() {
                   ${summary ? "bg-green-600 hover:bg-green-700" : "bg-gray-600 cursor-not-allowed"}`}
                 title="Share Summary"
               >
-                {/* A nicer share icon (arrow) */}
+                {/* A more modern share icon (arrow) */}
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-5 w-5"
@@ -497,13 +566,13 @@ export default function Home() {
 
             {!summary && (
               <p className="text-sm text-gray-400">
-                No summary yet. Save your current stats, then generate a summary to see your gains.
+                No summary yet. Please save your current stats, then generate a summary to see your gains.
               </p>
             )}
 
             {summary && (
               <div className="bg-gray-800 p-4 rounded relative" ref={summaryRef}>
-                {/* Branding */}
+                {/* Branding / Watermark */}
                 <span className="absolute bottom-2 right-2 text-xs text-gray-500">
                   Lost City Hiscores Tracker
                 </span>
@@ -551,7 +620,7 @@ export default function Home() {
                     </button>
                     {summary.changes.length === 0 ? (
                       <p className="text-sm text-gray-300">
-                        No skill gains detected.
+                        No skill gains detected since the last snapshot.
                       </p>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -585,7 +654,7 @@ export default function Home() {
 
                 {summary.totalXPGained > 0 && (
                   <p className="text-xs text-green-400 mt-3">
-                    Don’t forget you can Share this summary to Discord, YouTube videos, or forum posts by clicking the share button above!
+                    Don’t forget: you can share this summary on Discord, YouTube, or forums by clicking the share button above!
                   </p>
                 )}
               </div>
@@ -597,7 +666,7 @@ export default function Home() {
         {data && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {data
-              .filter((skill) => skill.type !== 0) // skip Overall from these cards
+              .filter((skill) => skill.type !== 0) // Skip Overall from these individual cards
               .map((skill) => {
                 const meta = skillMeta[skill.type];
                 if (!meta) return null;
@@ -622,7 +691,9 @@ export default function Home() {
                           {meta.name}
                         </h3>
                       </div>
-                      <span className="text-sm">Lv {level}/99</span>
+                      <span className="text-sm">
+                        Lv {level}/99
+                      </span>
                     </div>
                     <div className="w-full h-2 bg-gray-700 rounded mb-2 overflow-hidden">
                       <div
