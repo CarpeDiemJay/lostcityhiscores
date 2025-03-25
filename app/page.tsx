@@ -301,7 +301,7 @@ export default function Home() {
               className="h-10 w-auto mr-3"
             />
             <h1 className="text-3xl font-bold text-[#c6aa54]">
-              Lost City Player Stats Tracker
+              Lost City Hiscores Tracker
             </h1>
           </div>
           <div className="flex w-full md:w-1/2 relative">
@@ -334,14 +334,14 @@ export default function Home() {
               so you can easily share your gains at the end of the day!
             </p>
             <p className="mb-6">
-              Play the main game at{' '}
+              Lost City is a free, open-source, community-run project. Play the game at{' '}
               <a
                 href="https://2004.lostcity.rs/title"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-400 underline"
               >
-                2004.lostcity.rs/title
+                2004.lostcity.rs/
               </a>.
             </p>
           </section>
