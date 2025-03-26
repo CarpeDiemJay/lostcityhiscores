@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
 import {
   LineChart,
   Line,
@@ -25,11 +24,11 @@ interface SkillData {
 interface Snapshot {
   id: number;
   username: string;
-  created_at: string;
+  created_at: string; // e.g. "2025-03-25T06:06:17.123Z"
   stats: SkillData[];
 }
 
-/** Time range presets */
+/** Time range presets (you can add more if you like) */
 const TIME_RANGES = [
   { label: "1h", days: 1/24 },
   { label: "4h", days: 4/24 },
@@ -43,7 +42,7 @@ const TIME_RANGES = [
   { label: "All", days: 99999 },
 ];
 
-/** For labeling each skill, icon, etc. */
+/** For labeling each skill, color, etc. */
 const skillMeta: Record<number, { name: string; icon: string }> = {
   0:  { name: "Overall",     icon: "/ui/Stats_icon.png"      },
   1:  { name: "Attack",      icon: "/ui/Attack_icon.png"     },
@@ -67,12 +66,12 @@ const skillMeta: Record<number, { name: string; icon: string }> = {
   21: { name: "Runecrafting",icon: "/ui/Runecrafting_icon.png"},
 };
 
-/** Convert XP * 10 to real XP. */
+/** A quick helper to do XP * 10 => real XP. */
 function xpValue(s: SkillData) {
   return Math.floor(s.value / 10);
 }
 
-/** Quick time-ago function for earliest/latest lines. */
+/** A quick time-ago function, if you want to show "2 hours ago" etc. */
 function timeAgo(date: Date): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -94,47 +93,48 @@ function timeAgo(date: Date): string {
 }
 
 export default function TrackerPage() {
-  // We'll read ?username= from the URL automatically
-  const searchParams = useSearchParams();
-  const initialUsername = searchParams.get("username") || "";
-
-  const [username, setUsername] = useState(initialUsername);
+  const [username, setUsername] = useState("");
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // The chosen timeframe
+  // The chosen timeframe (in days)
   const [timeRangeDays, setTimeRangeDays] = useState<number>(7); // default 7d
 
+  // Gains info (overall XP gained)
   const [xpGained, setXpGained] = useState<number>(0);
-  const [earliestSnapshotTime, setEarliestSnapshotTime] = useState("");
-  const [latestSnapshotTime, setLatestSnapshotTime] = useState("");
+
+  // For earliest & latest snapshot in the period
+  const [earliestSnapshotTime, setEarliestSnapshotTime] = useState<string>("");
+  const [latestSnapshotTime, setLatestSnapshotTime] = useState<string>("");
+
+  // For the skill-by-skill Gains table
   const [skillGains, setSkillGains] = useState<{
     skillType: number;
     xpDiff: number;
     levelDiff: number;
     rankDiff: number;
   }[]>([]);
+
+  // Chart data for Recharts
   const [chartData, setChartData] = useState<{ date: string; xp: number }[]>([]);
 
-  /** Auto-fetch snapshots if we have a username from the query. */
-  useEffect(() => {
-    if (username) {
-      fetchHistory(username);
-    }
-  }, [username]);
-
-  async function fetchHistory(player: string) {
+  /**
+   * Fetch snapshots from /api/getHistory for the given username
+   */
+  async function fetchHistory() {
+    if (!username) return;
     setLoading(true);
     setError("");
     setSnapshots([]);
 
     try {
-      const res = await fetch(`/api/getHistory?username=${encodeURIComponent(player)}`);
+      const res = await fetch(`/api/getHistory?username=${encodeURIComponent(username)}`);
       const json = await res.json();
       if (json.error) {
         setError(json.error);
       } else {
+        // We expect ascending order from the route
         setSnapshots(json.snapshots || []);
       }
     } catch (err) {
@@ -145,9 +145,13 @@ export default function TrackerPage() {
     }
   }
 
-  /** Filter snapshots by timeframe, compute Gains & chart data. */
+  /**
+   * Whenever snapshots or timeRangeDays changes, filter snapshots,
+   * compute Gains, earliest/latest times, skill-by-skill Gains, and chart data.
+   */
   useEffect(() => {
     if (snapshots.length === 0) {
+      // Reset everything
       setXpGained(0);
       setChartData([]);
       setSkillGains([]);
@@ -156,12 +160,13 @@ export default function TrackerPage() {
       return;
     }
 
+    // 1) Filter by time range
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - timeRangeDays);
 
     let filtered = snapshots;
     if (timeRangeDays < 99999) {
-      filtered = snapshots.filter(snap => {
+      filtered = snapshots.filter((snap) => {
         const snapDate = new Date(snap.created_at);
         return snapDate >= cutoff;
       });
@@ -176,12 +181,15 @@ export default function TrackerPage() {
       return;
     }
 
+    // 2) earliest & latest
     const earliest = filtered[0];
     const latest = filtered[filtered.length - 1];
 
+    // Show them in "time ago" format
     setEarliestSnapshotTime(timeAgo(new Date(earliest.created_at)));
     setLatestSnapshotTime(timeAgo(new Date(latest.created_at)));
 
+    // 3) Gains: Compare Overall XP
     const oldOverall = earliest.stats.find(s => s.type === 0);
     const newOverall = latest.stats.find(s => s.type === 0);
     const oldXP = oldOverall ? xpValue(oldOverall) : 0;
@@ -189,35 +197,47 @@ export default function TrackerPage() {
     const gained = newXP - oldXP;
     setXpGained(gained);
 
-    // skill-by-skill Gains
-    const diffs: {
+    // 4) Build skill-by-skill Gains
+    const skillDiffs: {
       skillType: number;
       xpDiff: number;
       levelDiff: number;
       rankDiff: number;
     }[] = [];
+
     for (const newSkill of latest.stats) {
-      if (newSkill.type === 0) continue; // skip Overall in the table
+      if (newSkill.type === 0) continue; // skip Overall
       const oldSkill = earliest.stats.find(s => s.type === newSkill.type);
       if (!oldSkill) continue;
 
-      const xpDiff = xpValue(newSkill) - xpValue(oldSkill);
+      const newXpVal = xpValue(newSkill);
+      const oldXpVal = xpValue(oldSkill);
+      const xpDiff = newXpVal - oldXpVal;
+
       const levelDiff = newSkill.level - oldSkill.level;
       const rankDiff = newSkill.rank - oldSkill.rank;
+      // negative rankDiff means improvement in rank
 
       if (xpDiff !== 0 || levelDiff !== 0 || rankDiff !== 0) {
-        diffs.push({ skillType: newSkill.type, xpDiff, levelDiff, rankDiff });
+        skillDiffs.push({
+          skillType: newSkill.type,
+          xpDiff,
+          levelDiff,
+          rankDiff,
+        });
       }
     }
-    diffs.sort((a, b) => b.xpDiff - a.xpDiff);
-    setSkillGains(diffs);
+    // Sort by xpDiff descending
+    skillDiffs.sort((a, b) => b.xpDiff - a.xpDiff);
+    setSkillGains(skillDiffs);
 
-    // Build chart data for Overall XP
-    const cData = filtered.map(snap => {
-      const ov = snap.stats.find(s => s.type === 0);
+    // 5) Build chart data for Recharts (Overall XP)
+    const cData = filtered.map((snap) => {
+      const overallSkill = snap.stats.find(s => s.type === 0);
+      const xpVal = overallSkill ? xpValue(overallSkill) : 0;
       return {
         date: snap.created_at,
-        xp: ov ? xpValue(ov) : 0,
+        xp: xpVal,
       };
     });
     setChartData(cData);
@@ -236,14 +256,14 @@ export default function TrackerPage() {
               className="h-10 w-auto mr-3"
             />
             <h1 className="text-3xl font-bold text-[#c6aa54]">
-              Lost City Gains
+              Lost City Hiscores Tracker (Gains)
             </h1>
           </div>
         </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-4">
-        {/* We only show the search bar in case the user wants to change username. */}
+        {/* SEARCH INPUT & BUTTON */}
         <div className="flex items-center gap-2 mb-6">
           <input
             type="text"
@@ -252,7 +272,12 @@ export default function TrackerPage() {
             onChange={(e) => setUsername(e.target.value)}
             className="px-3 py-2 rounded bg-gray-800 text-white focus:outline-none"
           />
-          {/* No explicit "Load" button; auto loads if username is present */}
+          <button
+            onClick={fetchHistory}
+            className="px-4 py-2 bg-blue-500 text-white font-semibold rounded hover:bg-blue-600"
+          >
+            Load History
+          </button>
         </div>
 
         {loading && <p className="text-yellow-400 mb-4">Loading snapshots...</p>}
@@ -277,9 +302,11 @@ export default function TrackerPage() {
           </select>
         </div>
 
-        {/* Gains Info */}
+        {/* GAIN INFO BOX */}
         <div className="bg-[#2c2f33] p-4 rounded mb-4 border border-[#c6aa54]">
           <h2 className="text-xl font-bold text-[#c6aa54] mb-2">Gains Overview</h2>
+
+          {/* If we have no snapshots in range, xpGained is 0 */}
           {snapshots.length === 0 ? (
             <p className="text-gray-400">No snapshots loaded yet.</p>
           ) : (
@@ -296,6 +323,8 @@ export default function TrackerPage() {
                   {timeRangeDays === 99999 ? "All Time" : `${timeRangeDays} days`}.
                 </p>
               )}
+
+              {/* Earliest + Latest snapshot times */}
               {earliestSnapshotTime && (
                 <p className="text-sm text-gray-300">
                   Earliest snapshot in period: <span className="font-bold">{earliestSnapshotTime}</span>
@@ -310,7 +339,7 @@ export default function TrackerPage() {
           )}
         </div>
 
-        {/* Skill Gains Table */}
+        {/* SKILL GAINS TABLE (similar to WOM Gains) */}
         {skillGains.length > 0 && (
           <div className="bg-[#2c2f33] p-4 rounded mb-4 border border-[#c6aa54] overflow-x-auto">
             <h2 className="text-xl font-bold text-[#c6aa54] mb-2">Skill Gains</h2>
@@ -327,6 +356,7 @@ export default function TrackerPage() {
                 {skillGains.map((row) => {
                   const meta = skillMeta[row.skillType];
                   const arrow = row.rankDiff < 0 ? "↑" : (row.rankDiff > 0 ? "↓" : "");
+                  // negative rankDiff => improved rank
                   const rankColor =
                     row.rankDiff < 0 ? "text-green-400" :
                     (row.rankDiff > 0 ? "text-red-400" : "text-gray-300");
@@ -361,7 +391,7 @@ export default function TrackerPage() {
           </div>
         )}
 
-        {/* Overall XP Chart */}
+        {/* OVERALL XP CHART SECTION */}
         <div className="bg-[#2c2f33] p-6 rounded-lg border border-[#c6aa54] mb-6">
           <h2 className="text-2xl font-bold text-[#c6aa54] mb-2">Overall XP Graph</h2>
           {chartData.length === 0 ? (
