@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { toPng } from "html-to-image";
+import Navbar from "./components/Navbar"; // <--- ADJUST PATH IF NEEDED
 
 /**
  * Represents a single skill's data from the hiscores API.
@@ -365,40 +366,11 @@ export default function Home() {
   })();
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white py-8">
-      {/* HEADER */}
-      <header className="max-w-5xl mx-auto px-4 mb-8">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center">
-            <img
-              src="/ui/IMG_1296.png"
-              alt="Home Icon"
-              className="h-10 w-auto mr-3"
-            />
-            <h1 className="text-3xl font-bold text-[#c6aa54]">
-              Lost City Hiscores Tracker
-            </h1>
-          </div>
-          <div className="flex w-full md:w-1/2 relative">
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && fetchData()}
-              placeholder="Search player..."
-              className="w-full py-2 px-4 bg-gray-800 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-[#c6aa54]"
-            />
-            <button
-              onClick={fetchData}
-              className="px-4 py-2 bg-[#c6aa54] text-black font-semibold rounded-r-lg hover:bg-yellow-400"
-            >
-              Search
-            </button>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gray-900 text-white">
+      {/* 1) Navbar, passing 'username' so "Tracker" link in the navbar includes ?username=... */}
+      <Navbar username={username} />
 
-      <main className="max-w-5xl mx-auto px-4">
+      <main className="max-w-5xl mx-auto px-4 py-8">
         {/* If no data, no error, no loading => intro */}
         {!data && !error && !loading && (
           <section className="text-center my-12">
@@ -423,6 +395,24 @@ export default function Home() {
             </p>
           </section>
         )}
+
+        {/* SEARCH BAR */}
+        <div className="flex flex-col md:flex-row items-center gap-2 mb-6">
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && fetchData()}
+            placeholder="Search player..."
+            className="w-full md:w-1/2 px-4 py-2 bg-gray-800 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-[#c6aa54]"
+          />
+          <button
+            onClick={fetchData}
+            className="px-4 py-2 bg-[#c6aa54] text-black font-semibold rounded hover:bg-yellow-400"
+          >
+            Search
+          </button>
+        </div>
 
         {loading && (
           <p className="text-center text-yellow-400 mb-4">
@@ -717,6 +707,18 @@ export default function Home() {
                   </div>
                 );
               })}
+          </div>
+        )}
+
+        {/* (Optional) Direct link to tracker with ?username=... */}
+        {username && (
+          <div className="mt-8 text-center">
+            <a
+              href={`/tracker?username=${encodeURIComponent(username)}`}
+              className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              View Gains for {username}
+            </a>
           </div>
         )}
       </main>
