@@ -214,9 +214,17 @@ export default function Home() {
   // Basic rank badge
   const rankBadge = (() => {
     if (!overall) return null;
-    if (overall.rank <= 50)   return "Top 50 Player";
-    if (overall.rank <= 100)  return "Top 100 Player";
-    if (overall.rank <= 1000) return "Top 1000 Player";
+    if (overall.rank === 1) return { text: 'Rank 1', color: 'from-purple-500 to-purple-700' };
+    if (overall.rank <= 5) return { text: 'Top 5', color: 'from-red-500 to-red-700' };
+    if (overall.rank <= 10) return { text: 'Top 10', color: 'from-orange-500 to-orange-700' };
+    if (overall.rank <= 25) return { text: 'Top 25', color: 'from-yellow-500 to-yellow-700' };
+    if (overall.rank <= 50) return { text: 'Top 50', color: 'from-green-500 to-green-700' };
+    if (overall.rank <= 100) return { text: 'Top 100', color: 'from-teal-500 to-teal-700' };
+    if (overall.rank <= 250) return { text: 'Top 250', color: 'from-blue-500 to-blue-700' };
+    if (overall.rank <= 500) return { text: 'Top 500', color: 'from-indigo-500 to-indigo-700' };
+    if (overall.rank <= 1000) return { text: 'Top 1000', color: 'from-violet-500 to-violet-700' };
+    if (overall.rank <= 2000) return { text: 'Top 2000', color: 'from-pink-500 to-pink-700' };
+    if (overall.rank <= 3000) return { text: 'Top 3000', color: 'from-rose-500 to-rose-700' };
     return null;
   })();
 
@@ -234,12 +242,30 @@ export default function Home() {
             Track your Lost City progress. Compare your stats and share your gains!
           </p>
           <div className="max-w-2xl mx-auto">
-            <SearchInput
-              value={username}
-              onChange={setUsername}
-              onSearch={fetchData}
-              loading={loading}
-            />
+            <div className="flex flex-col sm:flex-row gap-4 items-center">
+              <div className="relative flex-1 w-full">
+                <input
+                  type="text"
+                  placeholder="Enter username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && fetchData()}
+                  className="w-full px-4 py-3 bg-gray-800 rounded-lg text-white border border-gray-700 focus:outline-none focus:border-[#c6aa54]"
+                />
+                {loading && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-[#c6aa54] border-t-transparent"></div>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={fetchData}
+                disabled={loading}
+                className="w-full sm:w-auto px-6 py-3 bg-[#c6aa54] text-black font-semibold rounded-lg hover:bg-[#d4b75f] transition-colors disabled:opacity-50"
+              >
+                Search
+              </button>
+            </div>
           </div>
           {error && <p className="mt-4 text-red-400">{error}</p>}
         </div>
@@ -261,31 +287,31 @@ export default function Home() {
                   <div className="flex items-center gap-4 mb-3">
                     <h2 className="text-3xl font-bold text-[#c6aa54]">{username}</h2>
                     {rankBadge && (
-                      <span className="px-3 py-1 bg-[#c6aa54]/20 text-[#c6aa54] text-sm font-medium rounded-full">
-                        {rankBadge}
-                      </span>
+                      <div className={`px-3 py-1 rounded-full text-sm font-medium text-white bg-gradient-to-r ${rankBadge.color}`}>
+                        {rankBadge.text}
+                      </div>
                     )}
                     <TrackButton onClick={startTracking} />
                   </div>
                   <p className="text-gray-400">Last updated {timeAgo(new Date(overall.date || Date.now()))}</p>
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700/50">
-                  <p className="text-sm text-[#c6aa54] font-medium mb-2">Rank</p>
-                  <p className="text-3xl font-bold">#{overall.rank.toLocaleString()}</p>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700/50 relative group hover:border-[#c6aa54]/30 transition-colors">
+                  <p className="text-sm text-[#c6aa54] font-medium mb-1">Rank</p>
+                  <p className="text-2xl font-bold">#{overall.rank.toLocaleString()}</p>
                 </div>
-                <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700/50">
-                  <p className="text-sm text-[#c6aa54] font-medium mb-2">Combat Level</p>
-                  <p className="text-3xl font-bold">{calculateCombatLevel(data)}</p>
+                <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700/50 group hover:border-[#c6aa54]/30 transition-colors">
+                  <p className="text-sm text-[#c6aa54] font-medium mb-1">Combat Level</p>
+                  <p className="text-2xl font-bold">{calculateCombatLevel(data)}</p>
                 </div>
-                <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700/50">
-                  <p className="text-sm text-[#c6aa54] font-medium mb-2">Total Level</p>
-                  <p className="text-3xl font-bold">{overall.level}</p>
+                <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700/50 group hover:border-[#c6aa54]/30 transition-colors">
+                  <p className="text-sm text-[#c6aa54] font-medium mb-1">Total Level</p>
+                  <p className="text-2xl font-bold">{overall.level}</p>
                 </div>
-                <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700/50">
-                  <p className="text-sm text-[#c6aa54] font-medium mb-2">Total XP</p>
-                  <p className="text-3xl font-bold">{Math.floor(overall.value / 10).toLocaleString()}</p>
+                <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700/50 group hover:border-[#c6aa54]/30 transition-colors">
+                  <p className="text-sm text-[#c6aa54] font-medium mb-1">Total XP</p>
+                  <p className="text-2xl font-bold">{Math.floor(overall.value / 10).toLocaleString()}</p>
                 </div>
               </div>
             </div>
