@@ -14,6 +14,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Popover } from '@headlessui/react';
 import SearchInput from '../components/SearchInput';
+import RankBadge from '../components/RankBadge';
 
 /** Basic shape of skill data */
 interface SkillData {
@@ -120,21 +121,6 @@ function ParamsReader() {
   const searchParams = useSearchParams();
   const username = searchParams.get('username') || "";
   return <input type="hidden" id="username-param" value={username} />;
-}
-
-function getRankBadge(rank: number): { text: string; color: string } | null {
-  if (rank === 1) return { text: 'Rank 1', color: 'from-purple-500 to-purple-700' };
-  if (rank <= 5) return { text: 'Top 5', color: 'from-red-500 to-red-700' };
-  if (rank <= 10) return { text: 'Top 10', color: 'from-orange-500 to-orange-700' };
-  if (rank <= 25) return { text: 'Top 25', color: 'from-yellow-500 to-yellow-700' };
-  if (rank <= 50) return { text: 'Top 50', color: 'from-green-500 to-green-700' };
-  if (rank <= 100) return { text: 'Top 100', color: 'from-teal-500 to-teal-700' };
-  if (rank <= 250) return { text: 'Top 250', color: 'from-blue-500 to-blue-700' };
-  if (rank <= 500) return { text: 'Top 500', color: 'from-indigo-500 to-indigo-700' };
-  if (rank <= 1000) return { text: 'Top 1000', color: 'from-violet-500 to-violet-700' };
-  if (rank <= 2000) return { text: 'Top 2000', color: 'from-pink-500 to-pink-700' };
-  if (rank <= 3000) return { text: 'Top 3000', color: 'from-rose-500 to-rose-700' };
-  return null;
 }
 
 function TrackerContent() {
@@ -359,38 +345,13 @@ function TrackerContent() {
           Track your Lost City progress. Compare your stats and share your gains!
         </p>
         <div className="max-w-2xl mx-auto">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            <div className="relative flex-1 min-w-[300px]">
-              <input
-                type="text"
-                value={username}
-                disabled
-                className="w-full px-4 py-3 bg-gray-800 rounded-lg text-white border border-gray-700 focus:outline-none focus:border-[#c6aa54]"
-                placeholder="Enter username..."
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                <div className="group relative">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-[#c6aa54] cursor-help" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
-                  <div className="invisible group-hover:visible absolute right-0 bottom-full mb-2 w-48 p-2 bg-gray-800 text-sm text-white rounded shadow-lg">
-                    Stats are automatically updated every hour
-                  </div>
-                </div>
-              </div>
-            </div>
-            <Popover className="relative">
-              <Popover.Button
-                disabled
-                className="px-6 py-3 bg-[#c6aa54] text-black font-semibold rounded-lg hover:bg-[#d4b75f] transition-colors disabled:opacity-50"
-              >
-                Tracked
-              </Popover.Button>
-              <Popover.Panel className="absolute z-10 px-3 py-2 mt-2 text-sm bg-gray-800 text-white rounded shadow-lg border border-[#c6aa54]">
-                Player is being tracked
-              </Popover.Panel>
-            </Popover>
-          </div>
+          <SearchInput
+            value={username}
+            onChange={() => {}}
+            onSearch={() => {}}
+            loading={false}
+            disabled
+          />
         </div>
       </div>
 
@@ -403,11 +364,7 @@ function TrackerContent() {
             <div>
               <div className="flex items-center gap-4 mb-3">
                 <h2 className="text-3xl font-bold text-[#c6aa54]">{username}</h2>
-                {getRankBadge(latestOverall.rank) && (
-                  <div className={`px-3 py-1 rounded-full text-sm font-medium text-white bg-gradient-to-r ${getRankBadge(latestOverall.rank)?.color}`}>
-                    {getRankBadge(latestOverall.rank)?.text}
-                  </div>
-                )}
+                <RankBadge rank={latestOverall.rank} />
               </div>
               <p className="text-gray-400">Last updated {latestSnapshotTime}</p>
             </div>
