@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import {
   LineChart,
   Line,
@@ -114,7 +114,7 @@ function calculateCombatLevel(stats: SkillData[]): number {
   return Math.floor(base + Math.max(melee, range, mage));
 }
 
-export default function TrackerPage() {
+function TrackerContent() {
   const searchParams = useSearchParams();
   const [username, setUsername] = useState(searchParams.get('username') || "");
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
@@ -520,5 +520,24 @@ export default function TrackerPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function TrackerPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-b from-gray-900 to-[#1a1b26] text-white">
+        <div className="max-w-6xl mx-auto px-4 py-16">
+          <div className="text-center">
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-[#c6aa54] to-[#e9d5a0] text-transparent bg-clip-text">
+              Lost City Tracker
+            </h1>
+            <p className="text-xl text-gray-300">Loading...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <TrackerContent />
+    </Suspense>
   );
 }
