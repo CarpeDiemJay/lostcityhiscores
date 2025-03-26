@@ -3,6 +3,10 @@
 import React, { useState, useRef } from "react";
 import { toPng } from "html-to-image";
 import Navbar from "./components/Navbar"; // <--- ADJUST PATH IF NEEDED
+import TrackingStats from './components/TrackingStats';
+import SearchInput from './components/SearchInput';
+import TrackButton from './components/TrackButton';
+import Link from 'next/link';
 
 /**
  * Represents a single skill's data from the hiscores API.
@@ -106,6 +110,26 @@ function calculateProgress(level: number): number {
 }
 
 /**
+ * Calculates combat level using the 2004-era formula (no Summoning)
+ */
+function calculateCombatLevel(stats: SkillData[]): number {
+  const attack = stats.find(s => s.type === 1)?.level || 1;
+  const strength = stats.find(s => s.type === 3)?.level || 1;
+  const defence = stats.find(s => s.type === 2)?.level || 1;
+  const hitpoints = stats.find(s => s.type === 4)?.level || 10;
+  const prayer = stats.find(s => s.type === 6)?.level || 1;
+  const ranged = stats.find(s => s.type === 5)?.level || 1;
+  const magic = stats.find(s => s.type === 7)?.level || 1;
+
+  const base = 0.25 * (defence + hitpoints + Math.floor(prayer / 2));
+  const melee = 0.325 * (attack + strength);
+  const range = 0.325 * (Math.floor(ranged * 3 / 2));
+  const mage = 0.325 * (Math.floor(magic * 3 / 2));
+
+  return Math.floor(base + Math.max(melee, range, mage));
+}
+
+/**
  * This is your main page component, which fetches data from /api/hiscores,
  * saves snapshots to Supabase (/api/saveStats), retrieves them (/api/getHistory),
  * and compares to a chosen snapshot (/api/getLastSnapshot or a local selection).
@@ -169,8 +193,8 @@ export default function Home() {
     }
   }
 
-  // Overall skill from the newly fetched data
-  const overall = data?.find(s => s.type === 0);
+  // Find overall stats if data exists
+  const overall = data?.find(skill => skill.type === 0);
   const apiLastUpdated = overall?.date || null;
 
   // Highest XP skill
@@ -197,181 +221,129 @@ export default function Home() {
   })();
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <Navbar username={username} />
-
-      <main className="max-w-5xl mx-auto px-4 py-8">
-        {/* If no data, no error, no loading => intro */}
-        {!data && !error && !loading && (
-          <section className="text-center my-12">
-            <h2 className="text-2xl font-bold mb-4">
-              Welcome to Lost City Player Stats!
-            </h2>
-            <p className="mb-2">
-              Track your Lost City progress. Compare your stats from a previous snapshot
-              using a real database, so you can easily share your gains at the end of the day!
-            </p>
-            <p className="mb-6">
-              Lost City is a free, open-source, community-run project. (This site is not affiliated with Jagex.)
-              Play the game at{" "}
-              <a
-                href="https://2004.lostcity.rs/title"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-400 underline"
-              >
-                2004.lostcity.rs
-              </a>.
-            </p>
-          </section>
-        )}
-
-        {/* SEARCH BAR */}
-        <div className="flex flex-col md:flex-row items-center gap-2 mb-6">
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && fetchData()}
-            placeholder="Search player..."
-            className="w-full md:w-1/2 px-4 py-2 bg-gray-800 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-[#c6aa54]"
-          />
-          <button
-            onClick={fetchData}
-            className="px-4 py-2 bg-[#c6aa54] text-black font-semibold rounded hover:bg-yellow-400"
-          >
-            Search
-          </button>
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-[#1a1b26] text-white">
+      <div className="max-w-6xl mx-auto px-4 py-16">
+        {/* Hero Section */}
+        <div className="text-center mb-20">
+          <Link href="/" className="inline-block">
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-[#c6aa54] to-[#e9d5a0] text-transparent bg-clip-text">
+              Lost City Tracker
+            </h1>
+          </Link>
+          <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
+            Track your Lost City progress. Compare your stats and share your gains!
+          </p>
+          <div className="max-w-2xl mx-auto">
+            <SearchInput
+              value={username}
+              onChange={setUsername}
+              onSearch={fetchData}
+              loading={loading}
+            />
+          </div>
+          {error && <p className="mt-4 text-red-400">{error}</p>}
         </div>
 
-        {loading && (
-          <p className="text-center text-yellow-400 mb-4">
-            Loading, please wait...
-          </p>
-        )}
-        {error && (
-          <p className="text-center text-red-500 mb-4">
-            {error}
-          </p>
+        {/* Default View: Tracking Statistics */}
+        {!data && (
+          <div className="max-w-2xl mx-auto">
+            <TrackingStats />
+          </div>
         )}
 
-        {/* OVERVIEW CARD */}
+        {/* Stats Display */}
         {data && overall && (
-          <div className="bg-[#2c2f33] p-6 rounded-lg border border-[#c6aa54] mb-6 relative">
-            <div className="flex justify-between items-start">
-              <h2 className="text-2xl font-bold text-[#c6aa54] mb-2">
-                Overview
-              </h2>
-              {rankBadge && (
-                <span className="bg-[#c6aa54] text-black font-semibold text-xs py-1 px-2 rounded">
-                  {rankBadge}
-                </span>
-              )}
-            </div>
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <p className="text-lg mb-3 font-semibold">
-                  Player Name: {username}
-                </p>
-                <p>
-                  Total Level:{" "}
-                  <span className="font-bold">{overall.level}</span>
-                </p>
-                <p>
-                  Total XP:{" "}
-                  <span className="font-bold">
-                    {Math.floor(overall.value / 10).toLocaleString()}
-                  </span>
-                </p>
-                <p>
-                  Rank:{" "}
-                  <span className="font-bold">
-                    {overall.rank.toLocaleString()}
-                  </span>
-                </p>
-                {highestXpSkill && (
-                  <p>
-                    Highest XP Skill:{" "}
-                    <span className="font-bold">
-                      {highestXpSkill.level} {skillMeta[highestXpSkill.type].name} (
-                      {highestXpSkill.xp.toLocaleString()} XP)
-                    </span>
-                  </p>
-                )}
-              </div>
-              <button
-                onClick={startTracking}
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-2"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M10 3.5a6.5 6.5 0 0 0-6.5 6.5c0 3.59 2.91 6.5 6.5 6.5s6.5-2.91 6.5-6.5c0-3.59-2.91-6.5-6.5-6.5zm0 12a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11zm.5-8.5h-1v4h3v-1h-2v-3z"/>
-                </svg>
-                Track Progress
-              </button>
-            </div>
-            {apiLastUpdated && (
-              <p className="text-sm text-gray-400">
-                Last Updated (API):{" "}
-                <span className="font-bold">{apiLastUpdated}</span>
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* SKILL CARDS */}
-        {data && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {data
-              .filter((skill) => skill.type !== 0) // skip Overall from these cards
-              .map((skill) => {
-                const meta = skillMeta[skill.type];
-                if (!meta) return null;
-
-                const level = skill.level;
-                const xp = Math.floor(skill.value / 10);
-                const progress = calculateProgress(level);
-
-                return (
-                  <div
-                    key={skill.type}
-                    className="bg-[#2c2f33] p-4 rounded-lg border border-[#c6aa54] hover:bg-[#3b3e44] transition-colors"
-                  >
-                    <div className="flex justify-between items-center mb-1">
-                      <div className="flex items-center gap-1">
-                        <img
-                          src={meta.icon}
-                          alt={meta.name}
-                          className="w-5 h-5 mr-1"
-                        />
-                        <h3 className="font-bold text-[#c6aa54]">
-                          {meta.name}
-                        </h3>
-                      </div>
-                      <span className="text-sm">
-                        Lv {level}/99
+          <>
+            {/* Player Overview */}
+            <div className="bg-[#2c2f33]/90 backdrop-blur-sm rounded-xl border border-[#c6aa54]/50 p-8 mb-8 shadow-lg">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-8">
+                <div>
+                  <div className="flex items-center gap-4 mb-3">
+                    <h2 className="text-3xl font-bold text-[#c6aa54]">{username}</h2>
+                    {rankBadge && (
+                      <span className="px-3 py-1 bg-[#c6aa54]/20 text-[#c6aa54] text-sm font-medium rounded-full">
+                        {rankBadge}
                       </span>
-                    </div>
-                    <div className="w-full h-2 bg-gray-700 rounded mb-2 overflow-hidden">
-                      <div
-                        className="h-full transition-[width] duration-300 ease-in-out"
-                        style={{
-                          width: `${progress.toFixed(2)}%`,
-                          backgroundColor: meta.color,
-                        }}
-                      />
-                    </div>
-                    <p className="text-sm text-gray-300">
-                      XP: {xp.toLocaleString()}
-                    </p>
-                    <p className="text-sm text-gray-400">
-                      Rank: {skill.rank.toLocaleString()}
-                    </p>
+                    )}
+                    <TrackButton onClick={startTracking} />
                   </div>
-                );
-              })}
-          </div>
+                  <p className="text-gray-400">Last updated {timeAgo(new Date(overall.date || Date.now()))}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700/50">
+                  <p className="text-sm text-[#c6aa54] font-medium mb-2">Rank</p>
+                  <p className="text-3xl font-bold">#{overall.rank.toLocaleString()}</p>
+                </div>
+                <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700/50">
+                  <p className="text-sm text-[#c6aa54] font-medium mb-2">Combat Level</p>
+                  <p className="text-3xl font-bold">{calculateCombatLevel(data)}</p>
+                </div>
+                <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700/50">
+                  <p className="text-sm text-[#c6aa54] font-medium mb-2">Total Level</p>
+                  <p className="text-3xl font-bold">{overall.level}</p>
+                </div>
+                <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700/50">
+                  <p className="text-sm text-[#c6aa54] font-medium mb-2">Total XP</p>
+                  <p className="text-3xl font-bold">{Math.floor(overall.value / 10).toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Skill Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {data
+                .filter((skill) => skill.type !== 0)
+                .map((skill) => {
+                  const meta = skillMeta[skill.type];
+                  if (!meta) return null;
+
+                  const level = skill.level;
+                  const xp = Math.floor(skill.value / 10);
+                  const progress = calculateProgress(level);
+
+                  return (
+                    <div
+                      key={skill.type}
+                      className="group bg-[#2c2f33]/90 backdrop-blur-sm p-5 rounded-lg border border-[#c6aa54]/30 hover:border-[#c6aa54]/60 transition-all duration-300"
+                    >
+                      <div className="flex justify-between items-center mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 flex items-center justify-center rounded bg-gray-800/50 p-1.5 group-hover:bg-gray-800 transition-colors">
+                            <img
+                              src={meta.icon}
+                              alt={meta.name}
+                              className="w-full h-full"
+                            />
+                          </div>
+                          <h3 className="font-bold text-[#c6aa54] group-hover:text-[#e9d5a0] transition-colors">
+                            {meta.name}
+                          </h3>
+                        </div>
+                        <span className="text-sm font-medium bg-gray-800/50 px-2 py-1 rounded">
+                          {level}/99
+                        </span>
+                      </div>
+                      <div className="w-full h-2 bg-gray-800/50 rounded-full overflow-hidden mb-3">
+                        <div
+                          className="h-full transition-all duration-300 ease-out group-hover:opacity-90"
+                          style={{
+                            width: `${progress.toFixed(2)}%`,
+                            backgroundColor: meta.color || "#c6aa54",
+                          }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-400">
+                        <span>XP: {xp.toLocaleString()}</span>
+                        <span>#{skill.rank.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </>
         )}
-      </main>
+      </div>
     </div>
   );
 }

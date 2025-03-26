@@ -72,7 +72,7 @@ async function fetchPlayerStats(username) {
         type: index,
         rank,
         level,
-        value: Math.floor(xp * 10) // We store XP * 10 in our DB
+        value: xp  // OSRS API already returns XP * 10, so we don't multiply
       };
     });
     
