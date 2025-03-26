@@ -11,6 +11,7 @@ interface PlayerOverviewProps {
   lastUpdated: string | null;
   onTrack?: () => void;
   isTracking?: boolean;
+  rankBadge?: string | null;
 }
 
 export default function PlayerOverview({
@@ -21,7 +22,8 @@ export default function PlayerOverview({
   totalXp,
   lastUpdated,
   onTrack,
-  isTracking
+  isTracking,
+  rankBadge
 }: PlayerOverviewProps) {
   return (
     <div className="bg-[#2c2f33]/90 backdrop-blur-sm rounded-xl border border-[#c6aa54]/50 p-4 sm:p-8 mb-8 shadow-lg">
@@ -29,8 +31,18 @@ export default function PlayerOverview({
         <div>
           <div className="flex flex-wrap items-center gap-4 mb-3">
             <h2 className="text-3xl font-bold text-[#c6aa54]">{username}</h2>
-            <RankBadge rank={rank} />
-            {onTrack && <TrackButton onClick={onTrack} isTracking={isTracking} />}
+            {rankBadge && (
+              <span className="px-3 py-1 bg-[#c6aa54]/20 text-[#c6aa54] text-sm font-medium rounded-full">
+                {rankBadge}
+              </span>
+            )}
+            {isTracking ? (
+              <span className="px-3 py-1 bg-green-500/20 text-green-400 text-sm font-medium rounded-full">
+                Tracked
+              </span>
+            ) : onTrack && (
+              <TrackButton onClick={onTrack} />
+            )}
           </div>
           {lastUpdated && (
             <p className="text-sm text-gray-400">

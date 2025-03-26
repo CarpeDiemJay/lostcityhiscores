@@ -225,9 +225,11 @@ export default function Home() {
     <main className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl sm:text-5xl font-bold text-center mb-8 bg-gradient-to-r from-[#c6aa54] to-[#e9d5a0] text-transparent bg-clip-text">
-            Lost City Tracker
-          </h1>
+          <Link href="/" className="block mb-8">
+            <h1 className="text-4xl sm:text-5xl font-bold text-center bg-gradient-to-r from-[#c6aa54] to-[#e9d5a0] text-transparent bg-clip-text">
+              Lost City Tracker
+            </h1>
+          </Link>
 
           <div className="mb-8">
             <SearchInput
@@ -253,44 +255,62 @@ export default function Home() {
               totalXp={Math.floor(overall.value / 10)}
               lastUpdated={apiLastUpdated}
               onTrack={startTracking}
+              rankBadge={rankBadge}
             />
           )}
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {data?.filter(skill => skill.type !== 0).map(skill => {
-              const meta = skillMeta[skill.type];
-              if (!meta) return null;
+          {data && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {data.filter(skill => skill.type !== 0).map(skill => {
+                const meta = skillMeta[skill.type];
+                if (!meta) return null;
 
-              return (
-                <div
-                  key={skill.type}
-                  className="bg-[#2c2f33]/90 backdrop-blur-sm rounded-lg p-4 border border-[#c6aa54]/50"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <img
-                      src={meta.icon}
-                      alt={meta.name}
-                      className="w-4 h-4"
-                    />
-                    <h3 className="text-sm font-medium text-[#c6aa54]">
-                      {meta.name}
-                    </h3>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xl font-bold">{skill.level}</p>
-                    <p className="text-sm text-gray-400">
-                      Rank: #{skill.rank.toLocaleString()}
-                    </p>
-                    <p className="text-sm text-gray-400">
-                      XP: {Math.floor(skill.value / 10).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                const level = skill.level;
+                const xp = Math.floor(skill.value / 10);
+                const progress = calculateProgress(level);
 
-          <TrackingStats />
+                return (
+                  <div
+                    key={skill.type}
+                    className="group bg-[#2c2f33]/90 backdrop-blur-sm p-5 rounded-lg border border-[#c6aa54]/30 hover:border-[#c6aa54]/60 transition-all duration-300"
+                  >
+                    <div className="flex justify-between items-center mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 flex items-center justify-center rounded bg-gray-800/50 p-1.5 group-hover:bg-gray-800 transition-colors">
+                          <img
+                            src={meta.icon}
+                            alt={meta.name}
+                            className="w-full h-full"
+                          />
+                        </div>
+                        <h3 className="font-bold text-[#c6aa54] group-hover:text-[#e9d5a0] transition-colors">
+                          {meta.name}
+                        </h3>
+                      </div>
+                      <span className="text-sm font-medium bg-gray-800/50 px-2 py-1 rounded">
+                        {level}/99
+                      </span>
+                    </div>
+                    <div className="w-full h-2 bg-gray-800/50 rounded-full overflow-hidden mb-3">
+                      <div
+                        className="h-full transition-all duration-300 ease-out group-hover:opacity-90"
+                        style={{
+                          width: `${progress.toFixed(2)}%`,
+                          backgroundColor: meta.color || "#c6aa54",
+                        }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-sm text-gray-400">
+                      <span>XP: {xp.toLocaleString()}</span>
+                      <span>#{skill.rank.toLocaleString()}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {!data && <TrackingStats />}
         </div>
       </div>
     </main>

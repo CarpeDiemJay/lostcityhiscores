@@ -13,6 +13,7 @@ import {
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import PlayerOverview from '../components/PlayerOverview';
+import SearchInput from '../components/SearchInput';
 
 /** Basic shape of skill data */
 interface SkillData {
@@ -45,28 +46,43 @@ const TIME_RANGES = [
   { label: "All", days: 99999 },
 ];
 
-/** For labeling each skill, color, etc. */
-const skillMeta: Record<number, { name: string; icon: string }> = {
-  0:  { name: "Overall",     icon: "/ui/Stats_icon.png"      },
-  1:  { name: "Attack",      icon: "/ui/Attack_icon.png"     },
-  2:  { name: "Defence",     icon: "/ui/Defence_icon.png"    },
-  3:  { name: "Strength",    icon: "/ui/Strength_icon.png"   },
-  4:  { name: "Hitpoints",   icon: "/ui/Hitpoints_icon.png"  },
-  5:  { name: "Ranged",      icon: "/ui/Ranged_icon.png"     },
-  6:  { name: "Prayer",      icon: "/ui/Prayer_icon.png"     },
-  7:  { name: "Magic",       icon: "/ui/Magic_icon.png"      },
-  8:  { name: "Cooking",     icon: "/ui/Cooking_icon.png"    },
-  9:  { name: "Woodcutting", icon: "/ui/Woodcutting_icon.png"},
-  10: { name: "Fletching",   icon: "/ui/Fletching_icon.png"  },
-  11: { name: "Fishing",     icon: "/ui/Fishing_icon.png"    },
-  12: { name: "Firemaking",  icon: "/ui/Firemaking_icon.png" },
-  13: { name: "Crafting",    icon: "/ui/Crafting_icon.png"   },
-  14: { name: "Smithing",    icon: "/ui/Smithing_icon.png"   },
-  15: { name: "Mining",      icon: "/ui/Mining_icon.png"     },
-  16: { name: "Herblore",    icon: "/ui/Herblore_icon.png"   },
-  17: { name: "Agility",     icon: "/ui/Agility_icon.png"    },
-  18: { name: "Thieving",    icon: "/ui/Thieving_icon.png"   },
-  21: { name: "Runecrafting",icon: "/ui/Runecrafting_icon.png"},
+interface SkillMeta {
+  name: string;
+  icon: string;
+  color: string;
+}
+
+const skillMeta: { [key: number]: SkillMeta } = {
+  0: { name: 'Overall', icon: '/skills/overall.png', color: '#c6aa54' },
+  1: { name: 'Attack', icon: '/skills/attack.png', color: '#F44336' },
+  2: { name: 'Defence', icon: '/skills/defence.png', color: '#2196F3' },
+  3: { name: 'Strength', icon: '/skills/strength.png', color: '#4CAF50' },
+  4: { name: 'Constitution', icon: '/skills/constitution.png', color: '#E91E63' },
+  5: { name: 'Ranged', icon: '/skills/ranged.png', color: '#8BC34A' },
+  6: { name: 'Prayer', icon: '/skills/prayer.png', color: '#FFC107' },
+  7: { name: 'Magic', icon: '/skills/magic.png', color: '#9C27B0' },
+  8: { name: 'Cooking', icon: '/skills/cooking.png', color: '#795548' },
+  9: { name: 'Woodcutting', icon: '/skills/woodcutting.png', color: '#3F51B5' },
+  10: { name: 'Fletching', icon: '/skills/fletching.png', color: '#009688' },
+  11: { name: 'Fishing', icon: '/skills/fishing.png', color: '#00BCD4' },
+  12: { name: 'Firemaking', icon: '/skills/firemaking.png', color: '#FF5722' },
+  13: { name: 'Crafting', icon: '/skills/crafting.png', color: '#673AB7' },
+  14: { name: 'Smithing', icon: '/skills/smithing.png', color: '#607D8B' },
+  15: { name: 'Mining', icon: '/skills/mining.png', color: '#FF9800' },
+  16: { name: 'Herblore', icon: '/skills/herblore.png', color: '#4CAF50' },
+  17: { name: 'Agility', icon: '/skills/agility.png', color: '#03A9F4' },
+  18: { name: 'Thieving', icon: '/skills/thieving.png', color: '#9E9E9E' },
+  19: { name: 'Slayer', icon: '/skills/slayer.png', color: '#F44336' },
+  20: { name: 'Farming', icon: '/skills/farming.png', color: '#8BC34A' },
+  21: { name: 'Runecrafting', icon: '/skills/runecrafting.png', color: '#FF5722' },
+  22: { name: 'Hunter', icon: '/skills/hunter.png', color: '#795548' },
+  23: { name: 'Construction', icon: '/skills/construction.png', color: '#9C27B0' },
+  24: { name: 'Summoning', icon: '/skills/summoning.png', color: '#FFC107' },
+  25: { name: 'Dungeoneering', icon: '/skills/dungeoneering.png', color: '#607D8B' },
+  26: { name: 'Divination', icon: '/skills/divination.png', color: '#9C27B0' },
+  27: { name: 'Invention', icon: '/skills/invention.png', color: '#FF9800' },
+  28: { name: 'Archaeology', icon: '/skills/archaeology.png', color: '#795548' },
+  29: { name: 'Necromancy', icon: '/skills/necromancy.png', color: '#673AB7' },
 };
 
 /** A quick helper to do XP * 10 => real XP. */
@@ -311,15 +327,33 @@ function TrackerContent() {
   // Get the latest overall stats
   const latestOverall = latestStats.find(s => s.type === 0);
 
+  // Basic rank badge
+  const rankBadge = (() => {
+    if (!latestOverall) return null;
+    if (latestOverall.rank <= 50)   return "Top 50 Player";
+    if (latestOverall.rank <= 100)  return "Top 100 Player";
+    if (latestOverall.rank <= 1000) return "Top 1000 Player";
+    return null;
+  })();
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           <Link href="/" className="block mb-8">
             <h1 className="text-4xl sm:text-5xl font-bold text-center bg-gradient-to-r from-[#c6aa54] to-[#e9d5a0] text-transparent bg-clip-text">
               Lost City Tracker
             </h1>
           </Link>
+
+          <div className="mb-8">
+            <SearchInput
+              value={username}
+              onChange={setUsername}
+              onSearch={fetchHistory}
+              isLoading={loading}
+            />
+          </div>
 
           {error && (
             <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4 mb-8 text-red-400">
@@ -336,6 +370,8 @@ function TrackerContent() {
                 totalLevel={snapshots[snapshots.length - 1].stats.find(s => s.type === 0)?.level || 0}
                 totalXp={Math.floor((snapshots[snapshots.length - 1].stats.find(s => s.type === 0)?.value || 0) / 10)}
                 lastUpdated={snapshots[snapshots.length - 1].created_at}
+                isTracking={true}
+                rankBadge={rankBadge}
               />
 
               <div className="bg-[#2c2f33]/90 backdrop-blur-sm rounded-xl border border-[#c6aa54]/50 p-4 sm:p-8 mb-8 shadow-lg">
@@ -415,12 +451,36 @@ function TrackerContent() {
                         const meta = skillMeta[gain.skillType];
                         if (!meta) return null;
 
+                        const latestSkill = snapshots[snapshots.length - 1].stats.find(s => s.type === gain.skillType);
+                        if (!latestSkill) return null;
+
+                        const level = latestSkill.level;
+                        const progress = calculateProgress(level, Math.floor(latestSkill.value / 10));
+
                         return (
                           <tr key={gain.skillType} className="border-b border-gray-700/50">
                             <td className="py-3 px-4">
-                              <div className="flex items-center gap-2">
-                                <img src={meta.icon} alt={meta.name} className="w-5 h-5" />
-                                <span>{meta.name}</span>
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 flex items-center justify-center rounded bg-gray-800/50 p-1.5">
+                                  <img src={meta.icon} alt={meta.name} className="w-full h-full" />
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="font-bold text-[#c6aa54]">{meta.name}</span>
+                                    <span className="text-sm font-medium bg-gray-800/50 px-2 py-1 rounded">
+                                      {level}/99
+                                    </span>
+                                  </div>
+                                  <div className="w-full h-1.5 bg-gray-800/50 rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full"
+                                      style={{
+                                        width: `${progress.toFixed(2)}%`,
+                                        backgroundColor: meta.color,
+                                      }}
+                                    />
+                                  </div>
+                                </div>
                               </div>
                             </td>
                             <td className="text-right py-3 px-4">
@@ -466,4 +526,22 @@ export default function TrackerPage() {
       <TrackerContent />
     </Suspense>
   );
+}
+
+function calculateProgress(level: number, currentXP: number): number {
+  if (level >= 99) return 100;
+  
+  // XP table for levels 1-99
+  const xpTable = [0];
+  let points = 0;
+  for (let i = 1; i < 99; i++) {
+    points += Math.floor(i + 300 * Math.pow(2, i / 7));
+    xpTable[i] = Math.floor(points / 4);
+  }
+
+  const xpForLevel = xpTable[level - 1];
+  const xpForNextLevel = xpTable[level];
+  const xpDiff = xpForNextLevel - xpForLevel;
+  const xpProgress = currentXP - xpForLevel;
+  return Math.min(100, Math.max(0, (xpProgress / xpDiff) * 100));
 }
