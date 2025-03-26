@@ -248,9 +248,14 @@ function TrackerContent() {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - timeRangeDays);
 
-    let filtered = snapshots;
+    // Sort snapshots by date first
+    const sortedSnapshots = [...snapshots].sort((a, b) => 
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+
+    let filtered = sortedSnapshots;
     if (timeRangeDays < 99999) {
-      filtered = snapshots.filter((snap) => {
+      filtered = sortedSnapshots.filter((snap) => {
         const snapDate = new Date(snap.created_at);
         return snapDate >= cutoff;
       });
@@ -324,7 +329,13 @@ function TrackerContent() {
         xp: xpVal,
       };
     });
-    setChartData(cData);
+
+    // Only show "No data" message if we have no snapshots at all
+    if (snapshots.length === 0) {
+      setChartData([]);
+    } else {
+      setChartData(cData);
+    }
 
   }, [snapshots, timeRangeDays]);
 
@@ -336,252 +347,250 @@ function TrackerContent() {
   const latestOverall = latestStats.find(s => s.type === 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-[#1a1b26] text-white">
-      <div className="max-w-6xl mx-auto px-4 py-16">
-        {/* Hero Section */}
-        <div className="text-center mb-20">
-          <Link href="/" className="inline-block">
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-[#c6aa54] to-[#e9d5a0] text-transparent bg-clip-text hover:scale-[1.01] transition-transform">
-              Lost City Tracker
-            </h1>
-          </Link>
-          <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
-            Track your Lost City progress. Compare your stats and share your gains!
-          </p>
-          <div className="max-w-2xl mx-auto">
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-              <div className="relative flex-1 min-w-[300px]">
-                <input
-                  type="text"
-                  value={username}
-                  disabled
-                  className="w-full px-4 py-3 bg-gray-800 rounded-lg text-white border border-gray-700 focus:outline-none focus:border-[#c6aa54]"
-                  placeholder="Enter username..."
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <div className="group relative">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-[#c6aa54] cursor-help" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
-                    <div className="invisible group-hover:visible absolute right-0 bottom-full mb-2 w-48 p-2 bg-gray-800 text-sm text-white rounded shadow-lg">
-                      Stats are automatically updated every hour
-                    </div>
+    <>
+      {/* Hero Section */}
+      <div className="text-center mb-20">
+        <Link href="/" className="inline-block">
+          <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-[#c6aa54] to-[#e9d5a0] text-transparent bg-clip-text">
+            Lost City Tracker
+          </h1>
+        </Link>
+        <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
+          Track your Lost City progress. Compare your stats and share your gains!
+        </p>
+        <div className="max-w-2xl mx-auto">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            <div className="relative flex-1 min-w-[300px]">
+              <input
+                type="text"
+                value={username}
+                disabled
+                className="w-full px-4 py-3 bg-gray-800 rounded-lg text-white border border-gray-700 focus:outline-none focus:border-[#c6aa54]"
+                placeholder="Enter username..."
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <div className="group relative">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-[#c6aa54] cursor-help" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                  <div className="invisible group-hover:visible absolute right-0 bottom-full mb-2 w-48 p-2 bg-gray-800 text-sm text-white rounded shadow-lg">
+                    Stats are automatically updated every hour
                   </div>
                 </div>
               </div>
-              <Popover className="relative">
-                <Popover.Button
-                  disabled
-                  className="px-6 py-3 bg-[#c6aa54] text-black font-semibold rounded-lg hover:bg-[#d4b75f] transition-colors disabled:opacity-50"
-                >
-                  Tracked
-                </Popover.Button>
-                <Popover.Panel className="absolute z-10 px-3 py-2 mt-2 text-sm bg-gray-800 text-white rounded shadow-lg border border-[#c6aa54]">
-                  Player is being tracked
-                </Popover.Panel>
-              </Popover>
             </div>
+            <Popover className="relative">
+              <Popover.Button
+                disabled
+                className="px-6 py-3 bg-[#c6aa54] text-black font-semibold rounded-lg hover:bg-[#d4b75f] transition-colors disabled:opacity-50"
+              >
+                Tracked
+              </Popover.Button>
+              <Popover.Panel className="absolute z-10 px-3 py-2 mt-2 text-sm bg-gray-800 text-white rounded shadow-lg border border-[#c6aa54]">
+                Player is being tracked
+              </Popover.Panel>
+            </Popover>
           </div>
         </div>
+      </div>
 
-        {error && <p className="text-red-400 mb-6">{error}</p>}
+      {error && <p className="text-red-400 mb-6">{error}</p>}
 
-        {/* Player Stats Overview */}
-        {latestOverall && (
-          <div className="bg-[#2c2f33]/90 backdrop-blur-sm rounded-xl border border-[#c6aa54]/50 p-8 mb-8 shadow-lg">
-            <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-8">
-              <div>
-                <div className="flex items-center gap-4 mb-3">
-                  <h2 className="text-3xl font-bold text-[#c6aa54]">{username}</h2>
-                  {getRankBadge(latestOverall.rank) && (
-                    <div className={`px-3 py-1 rounded-full text-sm font-medium text-white bg-gradient-to-r ${getRankBadge(latestOverall.rank)?.color}`}>
-                      {getRankBadge(latestOverall.rank)?.text}
-                    </div>
-                  )}
-                </div>
-                <p className="text-gray-400">Last updated {latestSnapshotTime}</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700/50 relative group hover:border-[#c6aa54]/30 transition-colors">
-                <p className="text-sm text-[#c6aa54] font-medium mb-2">Rank</p>
-                <p className="text-3xl font-bold">#{latestOverall.rank.toLocaleString()}</p>
-              </div>
-              <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700/50 group hover:border-[#c6aa54]/30 transition-colors">
-                <p className="text-sm text-[#c6aa54] font-medium mb-2">Combat Level</p>
-                <p className="text-3xl font-bold">{combatLevel}</p>
-              </div>
-              <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700/50 group hover:border-[#c6aa54]/30 transition-colors">
-                <p className="text-sm text-[#c6aa54] font-medium mb-2">Total Level</p>
-                <p className="text-3xl font-bold">{latestOverall.level}</p>
-              </div>
-              <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700/50 group hover:border-[#c6aa54]/30 transition-colors">
-                <p className="text-sm text-[#c6aa54] font-medium mb-2">Total XP</p>
-                <p className="text-3xl font-bold">{Math.floor(latestOverall.value / 10).toLocaleString()}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Combined Gains Overview and Skill Gains */}
+      {/* Player Stats Overview */}
+      {latestOverall && (
         <div className="bg-[#2c2f33]/90 backdrop-blur-sm rounded-xl border border-[#c6aa54]/50 p-8 mb-8 shadow-lg">
           <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-8">
             <div>
-              <h2 className="text-2xl font-bold text-[#c6aa54] mb-2">Progress Overview</h2>
-              {snapshots.length === 0 ? (
-                <p className="text-gray-400">No snapshots loaded yet.</p>
-              ) : (
-                <>
-                  {xpGained === 0 ? (
-                    <p className="text-yellow-400">
-                      No XP gained in this timeframe (or insufficient data).
-                    </p>
-                  ) : (
-                    <p className="text-white">
-                      Gained{" "}
-                      <span className="font-bold text-[#c6aa54]">{xpGained.toLocaleString()}</span>{" "}
-                      Overall XP in the last{" "}
-                      {timeRangeDays === 99999 ? "All Time" : `${timeRangeDays} days`}.
-                    </p>
-                  )}
-                  <div className="flex gap-4 mt-2 text-sm text-gray-300">
-                    {earliestSnapshotTime && (
-                      <span>From: <span className="font-bold">{earliestSnapshotTime}</span></span>
-                    )}
-                    {latestSnapshotTime && (
-                      <span>To: <span className="font-bold">{latestSnapshotTime}</span></span>
-                    )}
+              <div className="flex items-center gap-4 mb-3">
+                <h2 className="text-3xl font-bold text-[#c6aa54]">{username}</h2>
+                {getRankBadge(latestOverall.rank) && (
+                  <div className={`px-3 py-1 rounded-full text-sm font-medium text-white bg-gradient-to-r ${getRankBadge(latestOverall.rank)?.color}`}>
+                    {getRankBadge(latestOverall.rank)?.text}
                   </div>
-                </>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              <label htmlFor="timeRange" className="font-medium text-[#c6aa54]">
-                Time Range:
-              </label>
-              <select
-                id="timeRange"
-                value={timeRangeDays}
-                onChange={(e) => setTimeRangeDays(Number(e.target.value))}
-                className="bg-gray-800 rounded-lg px-4 py-2 text-white border border-gray-700 focus:outline-none focus:border-[#c6aa54]"
-              >
-                {TIME_RANGES.map(tr => (
-                  <option key={tr.label} value={tr.days}>
-                    {tr.label}
-                  </option>
-                ))}
-              </select>
+                )}
+              </div>
+              <p className="text-gray-400">Last updated {latestSnapshotTime}</p>
             </div>
           </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700/50 relative group hover:border-[#c6aa54]/30 transition-colors">
+              <p className="text-sm text-[#c6aa54] font-medium mb-1">Rank</p>
+              <p className="text-2xl font-bold">#{latestOverall.rank.toLocaleString()}</p>
+            </div>
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700/50 group hover:border-[#c6aa54]/30 transition-colors">
+              <p className="text-sm text-[#c6aa54] font-medium mb-1">Combat Level</p>
+              <p className="text-2xl font-bold">{combatLevel}</p>
+            </div>
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700/50 group hover:border-[#c6aa54]/30 transition-colors">
+              <p className="text-sm text-[#c6aa54] font-medium mb-1">Total Level</p>
+              <p className="text-2xl font-bold">{latestOverall.level}</p>
+            </div>
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700/50 group hover:border-[#c6aa54]/30 transition-colors">
+              <p className="text-sm text-[#c6aa54] font-medium mb-1">Total XP</p>
+              <p className="text-2xl font-bold">{Math.floor(latestOverall.value / 10).toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
-          {/* XP Chart */}
-          <div className="mb-8">
-            {chartData.length === 0 ? (
-              <p className="text-gray-400">No data to display for this timeframe.</p>
+      {/* Combined Gains Overview and Skill Gains */}
+      <div className="bg-[#2c2f33]/90 backdrop-blur-sm rounded-xl border border-[#c6aa54]/50 p-8 mb-8 shadow-lg">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-8">
+          <div>
+            <h2 className="text-2xl font-bold text-[#c6aa54] mb-2">Progress Overview</h2>
+            {snapshots.length === 0 ? (
+              <p className="text-gray-400">No snapshots loaded yet.</p>
             ) : (
-              <div style={{ width: "100%", height: 300 }}>
-                <ResponsiveContainer>
-                  <LineChart data={chartData}>
-                    <CartesianGrid stroke="#444" strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fill: "#fff" }}
-                      tickFormatter={(val) => {
-                        const d = new Date(val);
-                        return d.toLocaleDateString();
-                      }}
-                    />
-                    <YAxis
-                      tick={{ fill: "#fff" }}
-                      tickFormatter={(val) => val.toLocaleString()}
-                    />
-                    <Tooltip
-                      labelFormatter={(label) => {
-                        const d = new Date(label);
-                        return d.toLocaleString();
-                      }}
-                      formatter={(value: number) => `${value.toLocaleString()} XP`}
-                      contentStyle={{ backgroundColor: "#2c2f33", borderColor: "#c6aa54" }}
-                      labelStyle={{ color: "#fff" }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="xp"
-                      stroke="#c6aa54"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
+              <>
+                {xpGained === 0 ? (
+                  <p className="text-yellow-400">
+                    No XP gained in this timeframe (or insufficient data).
+                  </p>
+                ) : (
+                  <p className="text-white">
+                    Gained{" "}
+                    <span className="font-bold text-[#c6aa54]">{xpGained.toLocaleString()}</span>{" "}
+                    Overall XP in the last{" "}
+                    {timeRangeDays === 99999 ? "All Time" : `${timeRangeDays} days`}.
+                  </p>
+                )}
+                <div className="flex gap-4 mt-2 text-sm text-gray-300">
+                  {earliestSnapshotTime && (
+                    <span>From: <span className="font-bold">{earliestSnapshotTime}</span></span>
+                  )}
+                  {latestSnapshotTime && (
+                    <span>To: <span className="font-bold">{latestSnapshotTime}</span></span>
+                  )}
+                </div>
+              </>
             )}
           </div>
+          <div className="flex items-center gap-3">
+            <label htmlFor="timeRange" className="font-medium text-[#c6aa54]">
+              Time Range:
+            </label>
+            <select
+              id="timeRange"
+              value={timeRangeDays}
+              onChange={(e) => setTimeRangeDays(Number(e.target.value))}
+              className="bg-gray-800 rounded-lg px-4 py-2 text-white border border-gray-700 focus:outline-none focus:border-[#c6aa54]"
+            >
+              {TIME_RANGES.map(tr => (
+                <option key={tr.label} value={tr.days}>
+                  {tr.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
-          {/* Skill Gains Table */}
-          {skillGains.length > 0 && (
-            <div className="overflow-x-auto">
-              <h3 className="text-xl font-bold text-[#c6aa54] mb-4">Skill Gains</h3>
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-700/50">
-                    <th className="px-4 py-3 text-left text-[#c6aa54]">Skill</th>
-                    <th className="px-4 py-3 text-right text-[#c6aa54]">XP Gained</th>
-                    <th className="px-4 py-3 text-right text-[#c6aa54]">Levels Gained</th>
-                    <th className="px-4 py-3 text-right text-[#c6aa54]">Rank Change</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {skillGains.map((row) => {
-                    const meta = skillMeta[row.skillType];
-                    const arrow = row.rankDiff < 0 ? "↑" : (row.rankDiff > 0 ? "↓" : "");
-                    const rankColor =
-                      row.rankDiff < 0 ? "text-green-400" :
-                      (row.rankDiff > 0 ? "text-red-400" : "text-gray-300");
-                    const rankDiffAbs = Math.abs(row.rankDiff).toLocaleString();
-
-                    return (
-                      <tr key={row.skillType} className="border-b border-gray-700/50 last:border-0 hover:bg-gray-800/20 transition-colors">
-                        <td className="px-4 py-4 text-left">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 flex items-center justify-center rounded bg-gray-800/50 p-1.5 group-hover:bg-gray-800 transition-colors">
-                              <img
-                                src={meta.icon}
-                                alt={meta.name}
-                                className="w-full h-full"
-                              />
-                            </div>
-                            <span className="font-semibold text-white">{meta.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 text-right font-medium">
-                          {row.xpDiff.toLocaleString()}
-                        </td>
-                        <td className="px-4 py-4 text-right font-medium">
-                          {row.levelDiff > 0 ? `+${row.levelDiff}` : row.levelDiff}
-                        </td>
-                        <td className={`px-4 py-4 text-right font-semibold ${rankColor}`}>
-                          {arrow}{rankDiffAbs || 0}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+        {/* XP Chart */}
+        <div className="mb-8">
+          {chartData.length === 0 ? (
+            <p className="text-gray-400">No data to display for this timeframe.</p>
+          ) : (
+            <div style={{ width: "100%", height: 300 }}>
+              <ResponsiveContainer>
+                <LineChart data={chartData}>
+                  <CartesianGrid stroke="#444" strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fill: "#fff" }}
+                    tickFormatter={(val) => {
+                      const d = new Date(val);
+                      return d.toLocaleDateString();
+                    }}
+                  />
+                  <YAxis
+                    tick={{ fill: "#fff" }}
+                    tickFormatter={(val) => val.toLocaleString()}
+                  />
+                  <Tooltip
+                    labelFormatter={(label) => {
+                      const d = new Date(label);
+                      return d.toLocaleString();
+                    }}
+                    formatter={(value: number) => `${value.toLocaleString()} XP`}
+                    contentStyle={{ backgroundColor: "#2c2f33", borderColor: "#c6aa54" }}
+                    labelStyle={{ color: "#fff" }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="xp"
+                    stroke="#c6aa54"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           )}
         </div>
+
+        {/* Skill Gains Table */}
+        {skillGains.length > 0 && (
+          <div className="overflow-x-auto">
+            <h3 className="text-xl font-bold text-[#c6aa54] mb-4">Skill Gains</h3>
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-700/50">
+                  <th className="px-4 py-3 text-left text-[#c6aa54]">Skill</th>
+                  <th className="px-4 py-3 text-right text-[#c6aa54]">XP Gained</th>
+                  <th className="px-4 py-3 text-right text-[#c6aa54]">Levels Gained</th>
+                  <th className="px-4 py-3 text-right text-[#c6aa54]">Rank Change</th>
+                </tr>
+              </thead>
+              <tbody>
+                {skillGains.map((row) => {
+                  const meta = skillMeta[row.skillType];
+                  const arrow = row.rankDiff < 0 ? "↑" : (row.rankDiff > 0 ? "↓" : "");
+                  const rankColor =
+                    row.rankDiff < 0 ? "text-green-400" :
+                    (row.rankDiff > 0 ? "text-red-400" : "text-gray-300");
+                  const rankDiffAbs = Math.abs(row.rankDiff).toLocaleString();
+
+                  return (
+                    <tr key={row.skillType} className="border-b border-gray-700/50 last:border-0 hover:bg-gray-800/20 transition-colors">
+                      <td className="px-4 py-4 text-left">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 flex items-center justify-center rounded bg-gray-800/50 p-1.5 group-hover:bg-gray-800 transition-colors">
+                            <img
+                              src={meta.icon}
+                              alt={meta.name}
+                              className="w-full h-full"
+                            />
+                          </div>
+                          <span className="font-semibold text-white">{meta.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-right font-medium">
+                        {row.xpDiff.toLocaleString()}
+                      </td>
+                      <td className="px-4 py-4 text-right font-medium">
+                        {row.levelDiff > 0 ? `+${row.levelDiff}` : row.levelDiff}
+                      </td>
+                      <td className={`px-4 py-4 text-right font-semibold ${rankColor}`}>
+                        {arrow}{rankDiffAbs || 0}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-    </div>
+    </>
   );
 }
 
 export default function TrackerPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-[#1a1b26] text-white">
-      <Suspense>
-        <ParamsReader />
-      </Suspense>
       <div className="max-w-6xl mx-auto px-4 py-16">
+        <Suspense>
+          <ParamsReader />
+        </Suspense>
         <Suspense fallback={
           <div className="text-center py-12">
             <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#c6aa54] border-r-transparent"></div>
