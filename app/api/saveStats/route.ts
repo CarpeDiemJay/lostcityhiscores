@@ -14,6 +14,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing 'username' or 'stats' in request body" }, { status: 400 });
     }
 
+    // Normalize username to lowercase
+    const normalizedUsername = username.toLowerCase();
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -21,7 +24,7 @@ export async function POST(request: Request) {
     // Insert a new snapshot
     const { data, error } = await supabase
       .from("snapshots")
-      .insert([{ username, stats }])
+      .insert([{ username: normalizedUsername, stats }])
       .select("*");
 
     if (error) {

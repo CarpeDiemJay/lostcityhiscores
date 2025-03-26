@@ -1,5 +1,4 @@
 import React from 'react';
-import { Popover } from '@headlessui/react';
 
 interface SearchInputProps {
   value: string;
@@ -11,7 +10,7 @@ interface SearchInputProps {
 export default function SearchInput({ value, onChange, onSearch, loading }: SearchInputProps) {
   return (
     <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-      <div className="relative flex-1 min-w-[300px]">
+      <div className="relative flex-1 min-w-[200px]">
         <input
           type="text"
           placeholder="Enter username"
@@ -26,18 +25,13 @@ export default function SearchInput({ value, onChange, onSearch, loading }: Sear
           </div>
         )}
       </div>
-      <Popover className="relative">
-        <Popover.Button
-          onClick={onSearch}
-          disabled={loading}
-          className="px-6 py-3 bg-[#c6aa54] text-black font-semibold rounded-lg hover:bg-[#d4b75f] transition-colors disabled:opacity-50"
-        >
-          Search
-        </Popover.Button>
-        <Popover.Panel className="absolute z-10 px-3 py-2 mt-2 text-sm bg-gray-800 text-white rounded shadow-lg border border-[#c6aa54]">
-          Search for a player to view their stats
-        </Popover.Panel>
-      </Popover>
+      <button
+        onClick={onSearch}
+        disabled={loading}
+        className="w-full sm:w-auto px-6 py-3 bg-[#c6aa54] text-black font-semibold rounded-lg hover:bg-[#d4b75f] transition-colors disabled:opacity-50"
+      >
+        Search
+      </button>
     </div>
   );
 } 
