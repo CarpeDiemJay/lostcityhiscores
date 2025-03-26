@@ -12,7 +12,7 @@ import {
 } from "recharts";
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import PlayerOverview from '../components/PlayerOverview';
+import { Popover } from '@headlessui/react';
 import SearchInput from '../components/SearchInput';
 
 /** Basic shape of skill data */
@@ -46,43 +46,28 @@ const TIME_RANGES = [
   { label: "All", days: 99999 },
 ];
 
-interface SkillMeta {
-  name: string;
-  icon: string;
-  color: string;
-}
-
-const skillMeta: { [key: number]: SkillMeta } = {
-  0: { name: 'Overall', icon: '/skills/overall.png', color: '#c6aa54' },
-  1: { name: 'Attack', icon: '/skills/attack.png', color: '#F44336' },
-  2: { name: 'Defence', icon: '/skills/defence.png', color: '#2196F3' },
-  3: { name: 'Strength', icon: '/skills/strength.png', color: '#4CAF50' },
-  4: { name: 'Constitution', icon: '/skills/constitution.png', color: '#E91E63' },
-  5: { name: 'Ranged', icon: '/skills/ranged.png', color: '#8BC34A' },
-  6: { name: 'Prayer', icon: '/skills/prayer.png', color: '#FFC107' },
-  7: { name: 'Magic', icon: '/skills/magic.png', color: '#9C27B0' },
-  8: { name: 'Cooking', icon: '/skills/cooking.png', color: '#795548' },
-  9: { name: 'Woodcutting', icon: '/skills/woodcutting.png', color: '#3F51B5' },
-  10: { name: 'Fletching', icon: '/skills/fletching.png', color: '#009688' },
-  11: { name: 'Fishing', icon: '/skills/fishing.png', color: '#00BCD4' },
-  12: { name: 'Firemaking', icon: '/skills/firemaking.png', color: '#FF5722' },
-  13: { name: 'Crafting', icon: '/skills/crafting.png', color: '#673AB7' },
-  14: { name: 'Smithing', icon: '/skills/smithing.png', color: '#607D8B' },
-  15: { name: 'Mining', icon: '/skills/mining.png', color: '#FF9800' },
-  16: { name: 'Herblore', icon: '/skills/herblore.png', color: '#4CAF50' },
-  17: { name: 'Agility', icon: '/skills/agility.png', color: '#03A9F4' },
-  18: { name: 'Thieving', icon: '/skills/thieving.png', color: '#9E9E9E' },
-  19: { name: 'Slayer', icon: '/skills/slayer.png', color: '#F44336' },
-  20: { name: 'Farming', icon: '/skills/farming.png', color: '#8BC34A' },
-  21: { name: 'Runecrafting', icon: '/skills/runecrafting.png', color: '#FF5722' },
-  22: { name: 'Hunter', icon: '/skills/hunter.png', color: '#795548' },
-  23: { name: 'Construction', icon: '/skills/construction.png', color: '#9C27B0' },
-  24: { name: 'Summoning', icon: '/skills/summoning.png', color: '#FFC107' },
-  25: { name: 'Dungeoneering', icon: '/skills/dungeoneering.png', color: '#607D8B' },
-  26: { name: 'Divination', icon: '/skills/divination.png', color: '#9C27B0' },
-  27: { name: 'Invention', icon: '/skills/invention.png', color: '#FF9800' },
-  28: { name: 'Archaeology', icon: '/skills/archaeology.png', color: '#795548' },
-  29: { name: 'Necromancy', icon: '/skills/necromancy.png', color: '#673AB7' },
+/** For labeling each skill, color, etc. */
+const skillMeta: Record<number, { name: string; icon: string }> = {
+  0:  { name: "Overall",     icon: "/ui/Stats_icon.png"      },
+  1:  { name: "Attack",      icon: "/ui/Attack_icon.png"     },
+  2:  { name: "Defence",     icon: "/ui/Defence_icon.png"    },
+  3:  { name: "Strength",    icon: "/ui/Strength_icon.png"   },
+  4:  { name: "Hitpoints",   icon: "/ui/Hitpoints_icon.png"  },
+  5:  { name: "Ranged",      icon: "/ui/Ranged_icon.png"     },
+  6:  { name: "Prayer",      icon: "/ui/Prayer_icon.png"     },
+  7:  { name: "Magic",       icon: "/ui/Magic_icon.png"      },
+  8:  { name: "Cooking",     icon: "/ui/Cooking_icon.png"    },
+  9:  { name: "Woodcutting", icon: "/ui/Woodcutting_icon.png"},
+  10: { name: "Fletching",   icon: "/ui/Fletching_icon.png"  },
+  11: { name: "Fishing",     icon: "/ui/Fishing_icon.png"    },
+  12: { name: "Firemaking",  icon: "/ui/Firemaking_icon.png" },
+  13: { name: "Crafting",    icon: "/ui/Crafting_icon.png"   },
+  14: { name: "Smithing",    icon: "/ui/Smithing_icon.png"   },
+  15: { name: "Mining",      icon: "/ui/Mining_icon.png"     },
+  16: { name: "Herblore",    icon: "/ui/Herblore_icon.png"   },
+  17: { name: "Agility",     icon: "/ui/Agility_icon.png"    },
+  18: { name: "Thieving",    icon: "/ui/Thieving_icon.png"   },
+  21: { name: "Runecrafting",icon: "/ui/Runecrafting_icon.png"},
 };
 
 /** A quick helper to do XP * 10 => real XP. */
@@ -131,14 +116,29 @@ function calculateCombatLevel(stats: SkillData[]): number {
   return Math.floor(base + Math.max(melee, range, mage));
 }
 
-function SearchParamsWrapper({ children }: { children: (params: URLSearchParams) => React.ReactNode }) {
+function ParamsReader() {
   const searchParams = useSearchParams();
-  return <>{children(searchParams)}</>;
+  const username = searchParams.get('username') || "";
+  return <input type="hidden" id="username-param" value={username} />;
+}
+
+function getRankBadge(rank: number): { text: string; color: string } | null {
+  if (rank === 1) return { text: 'Rank 1', color: 'from-purple-500 to-purple-700' };
+  if (rank <= 5) return { text: 'Top 5', color: 'from-red-500 to-red-700' };
+  if (rank <= 10) return { text: 'Top 10', color: 'from-orange-500 to-orange-700' };
+  if (rank <= 25) return { text: 'Top 25', color: 'from-yellow-500 to-yellow-700' };
+  if (rank <= 50) return { text: 'Top 50', color: 'from-green-500 to-green-700' };
+  if (rank <= 100) return { text: 'Top 100', color: 'from-teal-500 to-teal-700' };
+  if (rank <= 250) return { text: 'Top 250', color: 'from-blue-500 to-blue-700' };
+  if (rank <= 500) return { text: 'Top 500', color: 'from-indigo-500 to-indigo-700' };
+  if (rank <= 1000) return { text: 'Top 1000', color: 'from-violet-500 to-violet-700' };
+  if (rank <= 2000) return { text: 'Top 2000', color: 'from-pink-500 to-pink-700' };
+  if (rank <= 3000) return { text: 'Top 3000', color: 'from-rose-500 to-rose-700' };
+  return null;
 }
 
 function TrackerContent() {
-  const searchParams = useSearchParams();
-  const [username, setUsername] = useState(searchParams.get('username') || "");
+  const [username, setUsername] = useState("");
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -154,7 +154,15 @@ function TrackerContent() {
   }[]>([]);
   const [chartData, setChartData] = useState<{ date: string; xp: number }[]>([]);
 
-  // Auto-load data when username is in URL
+  // Read username from URL params
+  useEffect(() => {
+    const param = document.getElementById('username-param') as HTMLInputElement;
+    if (param) {
+      setUsername(param.value);
+    }
+  }, []);
+
+  // Auto-load data when username changes
   useEffect(() => {
     if (username) {
       fetchHistory();
@@ -327,181 +335,239 @@ function TrackerContent() {
   // Get the latest overall stats
   const latestOverall = latestStats.find(s => s.type === 0);
 
-  // Basic rank badge
-  const rankBadge = (() => {
-    if (!latestOverall) return null;
-    if (latestOverall.rank <= 50)   return "Top 50 Player";
-    if (latestOverall.rank <= 100)  return "Top 100 Player";
-    if (latestOverall.rank <= 1000) return "Top 1000 Player";
-    return null;
-  })();
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <Link href="/" className="block mb-8">
-            <h1 className="text-4xl sm:text-5xl font-bold text-center bg-gradient-to-r from-[#c6aa54] to-[#e9d5a0] text-transparent bg-clip-text">
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-[#1a1b26] text-white">
+      <div className="max-w-6xl mx-auto px-4 py-16">
+        {/* Hero Section */}
+        <div className="text-center mb-20">
+          <Link href="/" className="inline-block">
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-[#c6aa54] to-[#e9d5a0] text-transparent bg-clip-text hover:scale-[1.01] transition-transform">
               Lost City Tracker
             </h1>
           </Link>
-
-          <div className="mb-8">
-            <SearchInput
-              value={username}
-              onChange={setUsername}
-              onSearch={fetchHistory}
-              isLoading={loading}
-            />
-          </div>
-
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4 mb-8 text-red-400">
-              {error}
-            </div>
-          )}
-
-          {snapshots.length > 0 && (
-            <>
-              <PlayerOverview
-                username={username}
-                rank={snapshots[snapshots.length - 1].stats.find(s => s.type === 0)?.rank || 0}
-                combatLevel={calculateCombatLevel(snapshots[snapshots.length - 1].stats)}
-                totalLevel={snapshots[snapshots.length - 1].stats.find(s => s.type === 0)?.level || 0}
-                totalXp={Math.floor((snapshots[snapshots.length - 1].stats.find(s => s.type === 0)?.value || 0) / 10)}
-                lastUpdated={snapshots[snapshots.length - 1].created_at}
-                isTracking={true}
-                rankBadge={rankBadge}
-              />
-
-              <div className="bg-[#2c2f33]/90 backdrop-blur-sm rounded-xl border border-[#c6aa54]/50 p-4 sm:p-8 mb-8 shadow-lg">
-                <div className="flex flex-wrap gap-4 mb-8">
-                  <div className="flex-1">
-                    <h2 className="text-xl font-bold text-[#c6aa54] mb-4">Time Range</h2>
-                    <div className="flex flex-wrap gap-2">
-                      {TIME_RANGES.map(range => (
-                        <button
-                          key={range.label}
-                          onClick={() => setTimeRangeDays(range.days)}
-                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                            timeRangeDays === range.days
-                              ? 'bg-[#c6aa54] text-black'
-                              : 'bg-gray-800/50 text-gray-300 hover:bg-gray-800'
-                          }`}
-                        >
-                          {range.label}
-                        </button>
-                      ))}
+          <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
+            Track your Lost City progress. Compare your stats and share your gains!
+          </p>
+          <div className="max-w-2xl mx-auto">
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+              <div className="relative flex-1 min-w-[300px]">
+                <input
+                  type="text"
+                  value={username}
+                  disabled
+                  className="w-full px-4 py-3 bg-gray-800 rounded-lg text-white border border-gray-700 focus:outline-none focus:border-[#c6aa54]"
+                  placeholder="Enter username..."
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div className="group relative">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-[#c6aa54] cursor-help" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                    <div className="invisible group-hover:visible absolute right-0 bottom-full mb-2 w-48 p-2 bg-gray-800 text-sm text-white rounded shadow-lg">
+                      Stats are automatically updated every hour
                     </div>
                   </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-[#c6aa54] mb-4">Total XP Gained</h2>
-                    <p className="text-2xl font-bold">{xpGained.toLocaleString()}</p>
-                  </div>
-                </div>
-
-                <div className="h-[300px] mb-8">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                      <XAxis
-                        dataKey="date"
-                        stroke="#9CA3AF"
-                        tick={{ fill: '#9CA3AF' }}
-                        tickFormatter={(value) => new Date(value).toLocaleDateString()}
-                      />
-                      <YAxis
-                        stroke="#9CA3AF"
-                        tick={{ fill: '#9CA3AF' }}
-                        tickFormatter={(value) => value.toLocaleString()}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#1F2937',
-                          border: '1px solid #374151',
-                          borderRadius: '0.5rem',
-                        }}
-                        labelStyle={{ color: '#9CA3AF' }}
-                        formatter={(value: any) => [value.toLocaleString(), 'XP']}
-                        labelFormatter={(label) => new Date(label).toLocaleString()}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="xp"
-                        stroke="#c6aa54"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-700/50">
-                        <th className="text-left py-3 px-4 text-[#c6aa54] font-medium">Skill</th>
-                        <th className="text-right py-3 px-4 text-[#c6aa54] font-medium">XP Gained</th>
-                        <th className="text-right py-3 px-4 text-[#c6aa54] font-medium">Levels Gained</th>
-                        <th className="text-right py-3 px-4 text-[#c6aa54] font-medium">Rank Change</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {skillGains.map(gain => {
-                        const meta = skillMeta[gain.skillType];
-                        if (!meta) return null;
-
-                        const latestSkill = snapshots[snapshots.length - 1].stats.find(s => s.type === gain.skillType);
-                        if (!latestSkill) return null;
-
-                        const level = latestSkill.level;
-                        const progress = calculateProgress(level, Math.floor(latestSkill.value / 10));
-
-                        return (
-                          <tr key={gain.skillType} className="border-b border-gray-700/50">
-                            <td className="py-3 px-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 flex items-center justify-center rounded bg-gray-800/50 p-1.5">
-                                  <img src={meta.icon} alt={meta.name} className="w-full h-full" />
-                                </div>
-                                <div className="flex-1">
-                                  <div className="flex items-center justify-between mb-1">
-                                    <span className="font-bold text-[#c6aa54]">{meta.name}</span>
-                                    <span className="text-sm font-medium bg-gray-800/50 px-2 py-1 rounded">
-                                      {level}/99
-                                    </span>
-                                  </div>
-                                  <div className="w-full h-1.5 bg-gray-800/50 rounded-full overflow-hidden">
-                                    <div
-                                      className="h-full"
-                                      style={{
-                                        width: `${progress.toFixed(2)}%`,
-                                        backgroundColor: meta.color,
-                                      }}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="text-right py-3 px-4">
-                              {gain.xpDiff.toLocaleString()}
-                            </td>
-                            <td className="text-right py-3 px-4">
-                              {gain.levelDiff > 0 && '+'}
-                              {gain.levelDiff}
-                            </td>
-                            <td className="text-right py-3 px-4">
-                              {gain.rankDiff > 0 && '+'}
-                              {gain.rankDiff.toLocaleString()}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
                 </div>
               </div>
-            </>
+              <Popover className="relative">
+                <Popover.Button
+                  disabled
+                  className="px-6 py-3 bg-[#c6aa54] text-black font-semibold rounded-lg hover:bg-[#d4b75f] transition-colors disabled:opacity-50"
+                >
+                  Tracked
+                </Popover.Button>
+                <Popover.Panel className="absolute z-10 px-3 py-2 mt-2 text-sm bg-gray-800 text-white rounded shadow-lg border border-[#c6aa54]">
+                  Player is being tracked
+                </Popover.Panel>
+              </Popover>
+            </div>
+          </div>
+        </div>
+
+        {error && <p className="text-red-400 mb-6">{error}</p>}
+
+        {/* Player Stats Overview */}
+        {latestOverall && (
+          <div className="bg-[#2c2f33]/90 backdrop-blur-sm rounded-xl border border-[#c6aa54]/50 p-8 mb-8 shadow-lg">
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-8">
+              <div>
+                <div className="flex items-center gap-4 mb-3">
+                  <h2 className="text-3xl font-bold text-[#c6aa54]">{username}</h2>
+                  {getRankBadge(latestOverall.rank) && (
+                    <div className={`px-3 py-1 rounded-full text-sm font-medium text-white bg-gradient-to-r ${getRankBadge(latestOverall.rank)?.color}`}>
+                      {getRankBadge(latestOverall.rank)?.text}
+                    </div>
+                  )}
+                </div>
+                <p className="text-gray-400">Last updated {latestSnapshotTime}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700/50 relative group hover:border-[#c6aa54]/30 transition-colors">
+                <p className="text-sm text-[#c6aa54] font-medium mb-2">Rank</p>
+                <p className="text-3xl font-bold">#{latestOverall.rank.toLocaleString()}</p>
+              </div>
+              <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700/50 group hover:border-[#c6aa54]/30 transition-colors">
+                <p className="text-sm text-[#c6aa54] font-medium mb-2">Combat Level</p>
+                <p className="text-3xl font-bold">{combatLevel}</p>
+              </div>
+              <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700/50 group hover:border-[#c6aa54]/30 transition-colors">
+                <p className="text-sm text-[#c6aa54] font-medium mb-2">Total Level</p>
+                <p className="text-3xl font-bold">{latestOverall.level}</p>
+              </div>
+              <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700/50 group hover:border-[#c6aa54]/30 transition-colors">
+                <p className="text-sm text-[#c6aa54] font-medium mb-2">Total XP</p>
+                <p className="text-3xl font-bold">{Math.floor(latestOverall.value / 10).toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Combined Gains Overview and Skill Gains */}
+        <div className="bg-[#2c2f33]/90 backdrop-blur-sm rounded-xl border border-[#c6aa54]/50 p-8 mb-8 shadow-lg">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-8">
+            <div>
+              <h2 className="text-2xl font-bold text-[#c6aa54] mb-2">Progress Overview</h2>
+              {snapshots.length === 0 ? (
+                <p className="text-gray-400">No snapshots loaded yet.</p>
+              ) : (
+                <>
+                  {xpGained === 0 ? (
+                    <p className="text-yellow-400">
+                      No XP gained in this timeframe (or insufficient data).
+                    </p>
+                  ) : (
+                    <p className="text-white">
+                      Gained{" "}
+                      <span className="font-bold text-[#c6aa54]">{xpGained.toLocaleString()}</span>{" "}
+                      Overall XP in the last{" "}
+                      {timeRangeDays === 99999 ? "All Time" : `${timeRangeDays} days`}.
+                    </p>
+                  )}
+                  <div className="flex gap-4 mt-2 text-sm text-gray-300">
+                    {earliestSnapshotTime && (
+                      <span>From: <span className="font-bold">{earliestSnapshotTime}</span></span>
+                    )}
+                    {latestSnapshotTime && (
+                      <span>To: <span className="font-bold">{latestSnapshotTime}</span></span>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <label htmlFor="timeRange" className="font-medium text-[#c6aa54]">
+                Time Range:
+              </label>
+              <select
+                id="timeRange"
+                value={timeRangeDays}
+                onChange={(e) => setTimeRangeDays(Number(e.target.value))}
+                className="bg-gray-800 rounded-lg px-4 py-2 text-white border border-gray-700 focus:outline-none focus:border-[#c6aa54]"
+              >
+                {TIME_RANGES.map(tr => (
+                  <option key={tr.label} value={tr.days}>
+                    {tr.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* XP Chart */}
+          <div className="mb-8">
+            {chartData.length === 0 ? (
+              <p className="text-gray-400">No data to display for this timeframe.</p>
+            ) : (
+              <div style={{ width: "100%", height: 300 }}>
+                <ResponsiveContainer>
+                  <LineChart data={chartData}>
+                    <CartesianGrid stroke="#444" strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fill: "#fff" }}
+                      tickFormatter={(val) => {
+                        const d = new Date(val);
+                        return d.toLocaleDateString();
+                      }}
+                    />
+                    <YAxis
+                      tick={{ fill: "#fff" }}
+                      tickFormatter={(val) => val.toLocaleString()}
+                    />
+                    <Tooltip
+                      labelFormatter={(label) => {
+                        const d = new Date(label);
+                        return d.toLocaleString();
+                      }}
+                      formatter={(value: number) => `${value.toLocaleString()} XP`}
+                      contentStyle={{ backgroundColor: "#2c2f33", borderColor: "#c6aa54" }}
+                      labelStyle={{ color: "#fff" }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="xp"
+                      stroke="#c6aa54"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+
+          {/* Skill Gains Table */}
+          {skillGains.length > 0 && (
+            <div className="overflow-x-auto">
+              <h3 className="text-xl font-bold text-[#c6aa54] mb-4">Skill Gains</h3>
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-700/50">
+                    <th className="px-4 py-3 text-left text-[#c6aa54]">Skill</th>
+                    <th className="px-4 py-3 text-right text-[#c6aa54]">XP Gained</th>
+                    <th className="px-4 py-3 text-right text-[#c6aa54]">Levels Gained</th>
+                    <th className="px-4 py-3 text-right text-[#c6aa54]">Rank Change</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {skillGains.map((row) => {
+                    const meta = skillMeta[row.skillType];
+                    const arrow = row.rankDiff < 0 ? "↑" : (row.rankDiff > 0 ? "↓" : "");
+                    const rankColor =
+                      row.rankDiff < 0 ? "text-green-400" :
+                      (row.rankDiff > 0 ? "text-red-400" : "text-gray-300");
+                    const rankDiffAbs = Math.abs(row.rankDiff).toLocaleString();
+
+                    return (
+                      <tr key={row.skillType} className="border-b border-gray-700/50 last:border-0 hover:bg-gray-800/20 transition-colors">
+                        <td className="px-4 py-4 text-left">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 flex items-center justify-center rounded bg-gray-800/50 p-1.5 group-hover:bg-gray-800 transition-colors">
+                              <img
+                                src={meta.icon}
+                                alt={meta.name}
+                                className="w-full h-full"
+                              />
+                            </div>
+                            <span className="font-semibold text-white">{meta.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-right font-medium">
+                          {row.xpDiff.toLocaleString()}
+                        </td>
+                        <td className="px-4 py-4 text-right font-medium">
+                          {row.levelDiff > 0 ? `+${row.levelDiff}` : row.levelDiff}
+                        </td>
+                        <td className={`px-4 py-4 text-right font-semibold ${rankColor}`}>
+                          {arrow}{rankDiffAbs || 0}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
@@ -511,37 +577,20 @@ function TrackerContent() {
 
 export default function TrackerPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-6xl mx-auto">
-            <h1 className="text-4xl sm:text-5xl font-bold text-center mb-8 bg-gradient-to-r from-[#c6aa54] to-[#e9d5a0] text-transparent bg-clip-text">
-              Lost City Tracker
-            </h1>
-            <div className="text-center text-gray-400">Loading...</div>
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-[#1a1b26] text-white">
+      <Suspense>
+        <ParamsReader />
+      </Suspense>
+      <div className="max-w-6xl mx-auto px-4 py-16">
+        <Suspense fallback={
+          <div className="text-center py-12">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#c6aa54] border-r-transparent"></div>
+            <p className="mt-4 text-gray-400">Loading player data...</p>
           </div>
-        </div>
+        }>
+          <TrackerContent />
+        </Suspense>
       </div>
-    }>
-      <TrackerContent />
-    </Suspense>
+    </div>
   );
-}
-
-function calculateProgress(level: number, currentXP: number): number {
-  if (level >= 99) return 100;
-  
-  // XP table for levels 1-99
-  const xpTable = [0];
-  let points = 0;
-  for (let i = 1; i < 99; i++) {
-    points += Math.floor(i + 300 * Math.pow(2, i / 7));
-    xpTable[i] = Math.floor(points / 4);
-  }
-
-  const xpForLevel = xpTable[level - 1];
-  const xpForNextLevel = xpTable[level];
-  const xpDiff = xpForNextLevel - xpForLevel;
-  const xpProgress = currentXP - xpForLevel;
-  return Math.min(100, Math.max(0, (xpProgress / xpDiff) * 100));
 }

@@ -7,7 +7,6 @@ import TrackingStats from './components/TrackingStats';
 import SearchInput from './components/SearchInput';
 import TrackButton from './components/TrackButton';
 import Link from 'next/link';
-import PlayerOverview from './components/PlayerOverview';
 
 /**
  * Represents a single skill's data from the hiscores API.
@@ -222,97 +221,129 @@ export default function Home() {
   })();
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <Link href="/" className="block mb-8">
-            <h1 className="text-4xl sm:text-5xl font-bold text-center bg-gradient-to-r from-[#c6aa54] to-[#e9d5a0] text-transparent bg-clip-text">
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-[#1a1b26] text-white">
+      <div className="max-w-6xl mx-auto px-4 py-16">
+        {/* Hero Section */}
+        <div className="text-center mb-20">
+          <Link href="/" className="inline-block">
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-[#c6aa54] to-[#e9d5a0] text-transparent bg-clip-text">
               Lost City Tracker
             </h1>
           </Link>
-
-          <div className="mb-8">
+          <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
+            Track your Lost City progress. Compare your stats and share your gains!
+          </p>
+          <div className="max-w-2xl mx-auto">
             <SearchInput
               value={username}
               onChange={setUsername}
               onSearch={fetchData}
-              isLoading={loading}
+              loading={loading}
             />
           </div>
-
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4 mb-8 text-red-400">
-              {error}
-            </div>
-          )}
-
-          {data && overall && (
-            <PlayerOverview
-              username={username}
-              rank={overall.rank}
-              combatLevel={calculateCombatLevel(data)}
-              totalLevel={overall.level}
-              totalXp={Math.floor(overall.value / 10)}
-              lastUpdated={apiLastUpdated}
-              onTrack={startTracking}
-              rankBadge={rankBadge}
-            />
-          )}
-
-          {data && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {data.filter(skill => skill.type !== 0).map(skill => {
-                const meta = skillMeta[skill.type];
-                if (!meta) return null;
-
-                const level = skill.level;
-                const xp = Math.floor(skill.value / 10);
-                const progress = calculateProgress(level);
-
-                return (
-                  <div
-                    key={skill.type}
-                    className="group bg-[#2c2f33]/90 backdrop-blur-sm p-5 rounded-lg border border-[#c6aa54]/30 hover:border-[#c6aa54]/60 transition-all duration-300"
-                  >
-                    <div className="flex justify-between items-center mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 flex items-center justify-center rounded bg-gray-800/50 p-1.5 group-hover:bg-gray-800 transition-colors">
-                          <img
-                            src={meta.icon}
-                            alt={meta.name}
-                            className="w-full h-full"
-                          />
-                        </div>
-                        <h3 className="font-bold text-[#c6aa54] group-hover:text-[#e9d5a0] transition-colors">
-                          {meta.name}
-                        </h3>
-                      </div>
-                      <span className="text-sm font-medium bg-gray-800/50 px-2 py-1 rounded">
-                        {level}/99
-                      </span>
-                    </div>
-                    <div className="w-full h-2 bg-gray-800/50 rounded-full overflow-hidden mb-3">
-                      <div
-                        className="h-full transition-all duration-300 ease-out group-hover:opacity-90"
-                        style={{
-                          width: `${progress.toFixed(2)}%`,
-                          backgroundColor: meta.color || "#c6aa54",
-                        }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-sm text-gray-400">
-                      <span>XP: {xp.toLocaleString()}</span>
-                      <span>#{skill.rank.toLocaleString()}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {!data && <TrackingStats />}
+          {error && <p className="mt-4 text-red-400">{error}</p>}
         </div>
+
+        {/* Default View: Tracking Statistics */}
+        {!data && (
+          <div className="max-w-2xl mx-auto">
+            <TrackingStats />
+          </div>
+        )}
+
+        {/* Stats Display */}
+        {data && overall && (
+          <>
+            {/* Player Overview */}
+            <div className="bg-[#2c2f33]/90 backdrop-blur-sm rounded-xl border border-[#c6aa54]/50 p-8 mb-8 shadow-lg">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-8">
+                <div>
+                  <div className="flex items-center gap-4 mb-3">
+                    <h2 className="text-3xl font-bold text-[#c6aa54]">{username}</h2>
+                    {rankBadge && (
+                      <span className="px-3 py-1 bg-[#c6aa54]/20 text-[#c6aa54] text-sm font-medium rounded-full">
+                        {rankBadge}
+                      </span>
+                    )}
+                    <TrackButton onClick={startTracking} />
+                  </div>
+                  <p className="text-gray-400">Last updated {timeAgo(new Date(overall.date || Date.now()))}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700/50">
+                  <p className="text-sm text-[#c6aa54] font-medium mb-2">Rank</p>
+                  <p className="text-3xl font-bold">#{overall.rank.toLocaleString()}</p>
+                </div>
+                <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700/50">
+                  <p className="text-sm text-[#c6aa54] font-medium mb-2">Combat Level</p>
+                  <p className="text-3xl font-bold">{calculateCombatLevel(data)}</p>
+                </div>
+                <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700/50">
+                  <p className="text-sm text-[#c6aa54] font-medium mb-2">Total Level</p>
+                  <p className="text-3xl font-bold">{overall.level}</p>
+                </div>
+                <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700/50">
+                  <p className="text-sm text-[#c6aa54] font-medium mb-2">Total XP</p>
+                  <p className="text-3xl font-bold">{Math.floor(overall.value / 10).toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Skill Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {data
+                .filter((skill) => skill.type !== 0)
+                .map((skill) => {
+                  const meta = skillMeta[skill.type];
+                  if (!meta) return null;
+
+                  const level = skill.level;
+                  const xp = Math.floor(skill.value / 10);
+                  const progress = calculateProgress(level);
+
+                  return (
+                    <div
+                      key={skill.type}
+                      className="group bg-[#2c2f33]/90 backdrop-blur-sm p-5 rounded-lg border border-[#c6aa54]/30 hover:border-[#c6aa54]/60 transition-all duration-300"
+                    >
+                      <div className="flex justify-between items-center mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 flex items-center justify-center rounded bg-gray-800/50 p-1.5 group-hover:bg-gray-800 transition-colors">
+                            <img
+                              src={meta.icon}
+                              alt={meta.name}
+                              className="w-full h-full"
+                            />
+                          </div>
+                          <h3 className="font-bold text-[#c6aa54] group-hover:text-[#e9d5a0] transition-colors">
+                            {meta.name}
+                          </h3>
+                        </div>
+                        <span className="text-sm font-medium bg-gray-800/50 px-2 py-1 rounded">
+                          {level}/99
+                        </span>
+                      </div>
+                      <div className="w-full h-2 bg-gray-800/50 rounded-full overflow-hidden mb-3">
+                        <div
+                          className="h-full transition-all duration-300 ease-out group-hover:opacity-90"
+                          style={{
+                            width: `${progress.toFixed(2)}%`,
+                            backgroundColor: meta.color || "#c6aa54",
+                          }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-400">
+                        <span>XP: {xp.toLocaleString()}</span>
+                        <span>#{skill.rank.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </>
+        )}
       </div>
-    </main>
+    </div>
   );
 }

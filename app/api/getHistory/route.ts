@@ -12,9 +12,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Missing username" }, { status: 400 });
   }
 
-  // Normalize username to lowercase
-  const normalizedUsername = username.toLowerCase();
-
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -24,7 +21,7 @@ export async function GET(request: Request) {
     const { data, error } = await supabase
       .from("snapshots")
       .select("*")
-      .eq("username", normalizedUsername)
+      .eq("username", username)
       .order("created_at", { ascending: true });
 
     if (error) {
