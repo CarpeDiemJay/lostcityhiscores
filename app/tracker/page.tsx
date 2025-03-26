@@ -10,6 +10,7 @@ import {
   CartesianGrid,
   ResponsiveContainer
 } from "recharts";
+import { useSearchParams } from 'next/navigation';
 
 /** Basic shape of skill data */
 interface SkillData {
@@ -93,31 +94,29 @@ function timeAgo(date: Date): string {
 }
 
 export default function TrackerPage() {
-  const [username, setUsername] = useState("");
+  const searchParams = useSearchParams();
+  const [username, setUsername] = useState(searchParams.get('username') || "");
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  // The chosen timeframe (in days)
-  const [timeRangeDays, setTimeRangeDays] = useState<number>(7); // default 7d
-
-  // Gains info (overall XP gained)
+  const [timeRangeDays, setTimeRangeDays] = useState<number>(7);
   const [xpGained, setXpGained] = useState<number>(0);
-
-  // For earliest & latest snapshot in the period
   const [earliestSnapshotTime, setEarliestSnapshotTime] = useState<string>("");
   const [latestSnapshotTime, setLatestSnapshotTime] = useState<string>("");
-
-  // For the skill-by-skill Gains table
   const [skillGains, setSkillGains] = useState<{
     skillType: number;
     xpDiff: number;
     levelDiff: number;
     rankDiff: number;
   }[]>([]);
-
-  // Chart data for Recharts
   const [chartData, setChartData] = useState<{ date: string; xp: number }[]>([]);
+
+  // Auto-load data when username is in URL
+  useEffect(() => {
+    if (username) {
+      fetchHistory();
+    }
+  }, [username]);
 
   /**
    * Fetch snapshots from /api/getHistory for the given username
@@ -130,16 +129,50 @@ export default function TrackerPage() {
 
     try {
       const res = await fetch(`/api/getHistory?username=${encodeURIComponent(username)}`);
-      const json = await res.json();
+      const text = await res.text();
+      console.log('Raw response from getHistory:', text); // Debug log
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status} ${res.statusText}`);
+      }
+      
+      let json;
+      try {
+        json = JSON.parse(text);
+      } catch (e) {
+        console.error('JSON parse error:', e, 'Raw text:', text);
+        throw new Error('Failed to parse server response as JSON');
+      }
+
+      if (!json) {
+        throw new Error('Empty response from server');
+      }
+      
       if (json.error) {
         setError(json.error);
-      } else {
-        // We expect ascending order from the route
-        setSnapshots(json.snapshots || []);
+        return;
       }
+      
+      if (!json.snapshots || !Array.isArray(json.snapshots)) {
+        throw new Error('Invalid response format: missing snapshots array');
+      }
+      
+      if (json.snapshots.length === 0) {
+        setError("No tracking data found for this player. Try clicking 'Track Progress' on the homepage first.");
+        return;
+      }
+
+      // Validate snapshot format
+      for (const snapshot of json.snapshots) {
+        if (!snapshot.stats || !Array.isArray(snapshot.stats)) {
+          throw new Error('Invalid snapshot format: missing stats array');
+        }
+      }
+      
+      setSnapshots(json.snapshots);
     } catch (err) {
-      console.error(err);
-      setError("Something went wrong while fetching history.");
+      console.error("Error in fetchHistory:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch player history");
     } finally {
       setLoading(false);
     }
@@ -270,17 +303,17 @@ export default function TrackerPage() {
             placeholder="Enter username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="px-3 py-2 rounded bg-gray-800 text-white focus:outline-none"
+            className="px-3 py-2 rounded bg-gray-800 text-white border border-gray-700 focus:outline-none focus:border-blue-500"
           />
           <button
             onClick={fetchHistory}
-            className="px-4 py-2 bg-blue-500 text-white font-semibold rounded hover:bg-blue-600"
+            disabled={loading}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
           >
-            Load History
+            {loading ? "Loading..." : "Load History"}
           </button>
         </div>
 
-        {loading && <p className="text-yellow-400 mb-4">Loading snapshots...</p>}
         {error && <p className="text-red-500 mb-4">{error}</p>}
 
         {/* TIME RANGE DROPDOWN */}
