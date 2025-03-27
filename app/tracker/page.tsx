@@ -65,7 +65,7 @@ const skillMeta: Record<number, { name: string; icon: string }> = {
   16: { name: "Herblore",    icon: "/ui/Herblore_icon.png"   },
   17: { name: "Agility",     icon: "/ui/Agility_icon.png"    },
   18: { name: "Thieving",    icon: "/ui/Thieving_icon.png"   },
-  21: { name: "Runecrafting",icon: "/ui/Runecrafting_icon.png"},
+  21: { name: "Runecrafting",icon: "/ui/Runecraft_icon.png"},
 };
 
 /** A quick helper to do XP * 10 => real XP. */
