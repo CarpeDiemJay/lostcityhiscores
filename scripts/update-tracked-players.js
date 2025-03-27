@@ -1,9 +1,10 @@
 const { createClient } = require('@supabase/supabase-js');
 const pLimit = require('p-limit');
 
-// Debug: Check if environment variables are set
-console.log('Supabase URL defined:', !!process.env.NEXT_PUBLIC_SUPABASE_URL);
-console.log('Service Role Key defined:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+// Debug logging
+console.log('Environment variables check:');
+console.log('NEXT_PUBLIC_SUPABASE_URL defined:', !!process.env.NEXT_PUBLIC_SUPABASE_URL);
+console.log('SUPABASE_SERVICE_ROLE_KEY defined:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 // Initialize Supabase client
 const supabase = createClient(
