@@ -1,39 +1,63 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
+import Header from "./components/Header";
 
 // Font setup
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const inter = Inter({ subsets: ["latin"] });
 
 // Metadata
 export const metadata: Metadata = {
-  title: "Lost City Player Progress Tracker",
-  description: "Track your player stats in Lost City (2004Scape)",
+  title: "Lost City Hiscores",
+  description: "Track your OSRS progress in the Lost City",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
       <head>
         {/* Add favicon */}
         <link rel="icon" href="/favicon.ico" />
+        <style dangerouslySetInnerHTML={{ __html: `
+          html, body, main, #root-layout, #root-layout-main, .sidebar-container, .main-content {
+            background-color: #0A0B0F;
+          }
+          html, body {
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            color: white;
+            overflow-x: hidden;
+          }
+          #root-layout {
+            min-height: 100vh;
+            position: relative;
+          }
+          .sidebar-container {
+            background-color: #0A0B0F;
+            z-index: 40;
+          }
+          @media (min-width: 768px) {
+            .main-content {
+              margin-left: 50px;
+              transition: margin-left 0.3s ease;
+              position: relative;
+              z-index: 10;
+            }
+          }
+        `}} />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+      <body className={inter.className}>
+        <div id="root-layout">
+          <Header />
+          <main id="root-layout-main" className="main-content">
+            {children}
+          </main>
+        </div>
       </body>
     </html>
   );

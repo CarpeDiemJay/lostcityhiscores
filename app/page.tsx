@@ -269,11 +269,11 @@ export default function Home() {
   })();
 
   return (
-    <div className="min-h-screen bg-[#0A0B0F] text-white">
-      <div className="max-w-6xl mx-auto px-4 py-8 md:py-16">
+    <div className="min-h-screen pt-8 pb-8 px-4">
+      <div className="max-w-6xl mx-auto">
         {/* Title - Always visible */}
         <a href="/" className="block text-center mb-12">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-[#3B82F6] via-[#60A5FA] to-[#3B82F6] text-transparent bg-clip-text">
+          <h1 className="text-[2.75rem] font-bold bg-gradient-to-r from-[#3B82F6] via-[#60A5FA] to-[#3B82F6] text-transparent bg-clip-text whitespace-nowrap">
             Lost City Tracker
           </h1>
         </a>

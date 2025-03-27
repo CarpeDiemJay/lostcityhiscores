@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface SkillData {
   type: number;
@@ -36,21 +37,26 @@ function xpValue(s: SkillData) {
   return Math.floor(s.value / 10);
 }
 
-/** A quick time-ago function */
-function timeAgo(date: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  if (diffMs < 0) return "in the future";
-
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  if (diffMins < 1) return "just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
+/** Format a date as "X time ago" */
+function timeAgo(date: Date) {
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
   
-  const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-  if (diffHrs < 24) return `${diffHrs}h ago`;
+  let interval = seconds / 31536000;
+  if (interval > 1) return Math.floor(interval) + " years ago";
   
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  return `${diffDays}d ago`;
+  interval = seconds / 2592000;
+  if (interval > 1) return Math.floor(interval) + " months ago";
+  
+  interval = seconds / 86400;
+  if (interval > 1) return Math.floor(interval) + " days ago";
+  
+  interval = seconds / 3600;
+  if (interval > 1) return Math.floor(interval) + " hours ago";
+  
+  interval = seconds / 60;
+  if (interval > 1) return Math.floor(interval) + " minutes ago";
+  
+  return Math.floor(seconds) + " seconds ago";
 }
 
 export default function TrackingStats() {
@@ -79,11 +85,27 @@ export default function TrackingStats() {
   }, []);
 
   if (error) {
-    return <div className="text-red-400">{error}</div>;
+    return (
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-red-400"
+      >
+        {error}
+      </motion.div>
+    );
   }
 
   if (!stats) {
-    return <div className="text-gray-400">Loading tracking statistics...</div>;
+    return (
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-gray-400"
+      >
+        Loading tracking statistics...
+      </motion.div>
+    );
   }
 
   // Get the most recent player
@@ -91,15 +113,30 @@ export default function TrackingStats() {
   const latestPlayerStats = latestPlayer?.stats.find(s => s.type === 0);
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-7xl mx-auto">
-      <div className="bg-[#111827]/90 backdrop-blur-sm rounded-lg p-4 border border-blue-500/20 flex flex-col items-center justify-center">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-7xl mx-auto"
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+        className="bg-[#111827]/90 backdrop-blur-sm rounded-lg p-4 border border-blue-500/20 flex flex-col items-center justify-center"
+      >
         <div className="text-3xl font-bold text-blue-400">{stats.totalPlayers}</div>
         <div className="text-sm text-gray-400">Players Tracked</div>
-      </div>
+      </motion.div>
 
       {latestPlayer && (
         <>
-          <div className="bg-[#111827]/90 backdrop-blur-sm rounded-lg p-4 border border-blue-500/20 flex flex-col items-center justify-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+            className="bg-[#111827]/90 backdrop-blur-sm rounded-lg p-4 border border-blue-500/20 flex flex-col items-center justify-center"
+          >
             <div className="text-sm text-gray-400">Latest Player</div>
             <button 
               onClick={() => {
@@ -116,9 +153,14 @@ export default function TrackingStats() {
             <div className="text-xs text-gray-500 mt-1">
               {timeAgo(new Date(latestPlayer.created_at))}
             </div>
-          </div>
+          </motion.div>
 
-          <div className="bg-[#111827]/90 backdrop-blur-sm rounded-lg p-4 border border-blue-500/20 flex flex-col items-center justify-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+            className="bg-[#111827]/90 backdrop-blur-sm rounded-lg p-4 border border-blue-500/20 flex flex-col items-center justify-center"
+          >
             <div className="flex items-center gap-2">
               <img src="/ui/Stats_icon.png" alt="Stats" className="w-4 h-4" />
               <div className="text-blue-400">
@@ -128,9 +170,9 @@ export default function TrackingStats() {
             <div className="text-sm text-gray-400 mt-1">
               {xpValue(latestPlayerStats!).toLocaleString()} XP
             </div>
-          </div>
+          </motion.div>
         </>
       )}
-    </div>
+    </motion.div>
   );
 } 
