@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { toPng } from "html-to-image";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "./components/Navbar"; // <--- ADJUST PATH IF NEEDED
@@ -167,6 +167,56 @@ export default function Home() {
   const [data, setData] = useState<SkillData[] | null>(null);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<'overview' | 'tracker'>('overview');
+
+  useEffect(() => {
+    const handleSearch = (event: CustomEvent<{ username: string }>) => {
+      const searchUsername = event.detail.username;
+      setUsername(searchUsername);
+      // We need to call fetchAndTrackPlayer with the new username immediately
+      if (searchUsername) {
+        setLoading(true);
+        setError("");
+        setData(null);
+        
+        fetch(`/api/hiscores?username=${encodeURIComponent(searchUsername)}`)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error("Failed to fetch player data.");
+            }
+            return response.json();
+          })
+          .then((json: SkillData[]) => {
+            if (!Array.isArray(json) || json.length === 0) {
+              setError("Player not found or no data returned.");
+              return;
+            }
+            
+            // Save stats automatically
+            return fetch('/api/saveStats', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ username: searchUsername, stats: json })
+            }).then(() => json);
+          })
+          .then((json: SkillData[]) => {
+            if (json) {
+              setData(json);
+              setError("");
+            }
+          })
+          .catch(err => {
+            console.error(err);
+            setError("Something went wrong while fetching hiscores.");
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      }
+    };
+
+    window.addEventListener('search-player', handleSearch as EventListener);
+    return () => window.removeEventListener('search-player', handleSearch as EventListener);
+  }, []);  // Empty dependency array since we're using the event data
 
   async function fetchAndTrackPlayer() {
     if (!username) return;

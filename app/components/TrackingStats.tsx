@@ -101,12 +101,18 @@ export default function TrackingStats() {
         <>
           <div className="bg-[#111827]/90 backdrop-blur-sm rounded-lg p-4 border border-blue-500/20 flex flex-col items-center justify-center">
             <div className="text-sm text-gray-400">Latest Player</div>
-            <Link 
-              href={`/tracker?username=${encodeURIComponent(latestPlayer.username)}`}
+            <button 
+              onClick={() => {
+                window.dispatchEvent(
+                  new CustomEvent('search-player', { 
+                    detail: { username: latestPlayer.username }
+                  })
+                );
+              }}
               className="text-lg font-semibold text-blue-400 hover:text-blue-300 transition-colors"
             >
               {latestPlayer.username}
-            </Link>
+            </button>
             <div className="text-xs text-gray-500 mt-1">
               {timeAgo(new Date(latestPlayer.created_at))}
             </div>

@@ -30,13 +30,21 @@ export default function SearchInput({ value, onChange, onSearch, loading, disabl
           onKeyDown={handleKeyDown}
           placeholder="Search player..."
           disabled={disabled}
-          className="w-full bg-[#111827]/50 backdrop-blur-sm text-white placeholder-gray-400 rounded-xl pl-11 pr-4 py-4 border border-blue-500/20 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all disabled:opacity-50"
+          className="w-full bg-[#111827]/50 backdrop-blur-sm text-white placeholder-gray-400 rounded-xl pl-11 pr-12 py-4 border border-blue-500/20 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all disabled:opacity-50"
         />
-        {loading && (
-          <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
+        <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
+          {loading ? (
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-500 border-r-transparent" />
-          </div>
-        )}
+          ) : (
+            <button
+              onClick={onSearch}
+              className="text-blue-400 hover:text-blue-300 transition-colors focus:outline-none"
+              disabled={disabled}
+            >
+              <MagnifyingGlassIcon className="h-5 w-5" />
+            </button>
+          )}
+        </div>
       </div>
       
       {disabled && (
