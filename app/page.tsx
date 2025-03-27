@@ -387,7 +387,7 @@ export default function Home() {
                         const currentXP = Math.floor(skill.value / 10);
                         const nextLevelXP = getNextLevelXP(skill.level);
                         const currentLevelXP = getCurrentLevelXP(skill.level);
-                        const xpProgress = ((currentXP - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
+                        const xpProgress = (skill.level / 99) * 100;
 
                         return (
                           <motion.div
