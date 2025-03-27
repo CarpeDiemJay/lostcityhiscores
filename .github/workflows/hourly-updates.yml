@@ -30,7 +30,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          npm install p-limit@4.0.0  # Add rate limiting package
+          npm install p-limit@3.1.0  # Use version 3 which supports CommonJS
         
       - name: Run update script
         id: update
