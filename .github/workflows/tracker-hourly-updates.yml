@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   update-players:
+    environment: prod    # Now using your 'prod' environment
     runs-on: ubuntu-latest
     
     env:
