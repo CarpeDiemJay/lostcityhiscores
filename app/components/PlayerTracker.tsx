@@ -375,7 +375,7 @@ export default function PlayerTracker({ username, playerData }: PlayerTrackerPro
                   timeRange === "1y" ? "year" : timeRange
                 }</span>
               ) : (
-                <span>No XP gains in the selected time period</span>
+                <span>No XP gains in the selected time period{skillGains.length > 0 ? ". Skills listed below had rank changes only." : ""}</span>
               )}
             </div>
           </div>
@@ -438,7 +438,15 @@ export default function PlayerTracker({ username, playerData }: PlayerTrackerPro
               {skillGains.length === 0 && (
                 <tr>
                   <td colSpan={4} className="text-center py-3 text-gray-400 text-sm">
-                    No gains in the selected time period
+                    {snapshots.length <= 1 ? (
+                      <>
+                        No historical data yet. Check back in an hour - we'll start tracking your progress automatically.
+                      </>
+                    ) : (
+                      <>
+                        No gains or rank changes in the selected time period
+                      </>
+                    )}
                   </td>
                 </tr>
               )}

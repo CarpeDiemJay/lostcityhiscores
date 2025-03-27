@@ -13,36 +13,28 @@ export async function GET() {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    // Get unique player count
-    const { data: uniquePlayers, error: countError } = await supabase
+    // Get all snapshots ordered by creation date
+    const { data: allSnapshots, error: snapshotsError } = await supabase
       .from('snapshots')
-      .select('username')
+      .select('*')
       .order('created_at', { ascending: false });
 
-    if (countError) throw countError;
+    if (snapshotsError) throw snapshotsError;
 
-    // Get unique usernames (case-insensitive)
-    const uniqueUsernames = [...new Set(uniquePlayers.map(p => p.username.toLowerCase()))];
-    
-    // Get most recent 5 players with their latest stats
-    const recentPlayers = [];
-    for (const username of uniqueUsernames.slice(0, 5)) {
-      const { data: snapshots, error: playerError } = await supabase
-        .from('snapshots')
-        .select('*')
-        .ilike('username', username) // Case-insensitive comparison
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (playerError) continue;
-      if (snapshots && snapshots.length > 0) {
-        recentPlayers.push(snapshots[0]);
-      }
-    }
+    // Process snapshots to get latest unique players
+    const seen = new Set<string>();
+    const latestSnapshots = allSnapshots
+      ?.filter(snapshot => {
+        const username = snapshot.username.toLowerCase();
+        if (seen.has(username)) return false;
+        seen.add(username);
+        return true;
+      })
+      .slice(0, 5) || [];
 
     return NextResponse.json({
-      totalPlayers: uniqueUsernames.length,
-      recentPlayers
+      totalPlayers: seen.size,
+      recentPlayers: latestSnapshots
     });
   } catch (err: any) {
     console.error("Error in getTrackingStats:", err);
