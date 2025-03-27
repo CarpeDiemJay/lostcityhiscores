@@ -31,6 +31,9 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
+          echo "Debug: Checking environment setup..."
+          echo "NEXT_PUBLIC_SUPABASE_URL set: ${{ env.NEXT_PUBLIC_SUPABASE_URL != '' }}"
+          echo "SUPABASE_SERVICE_ROLE_KEY set: ${{ env.SUPABASE_SERVICE_ROLE_KEY != '' }}"
           echo "Running update script..."
           node scripts/update-tracked-players.js
           

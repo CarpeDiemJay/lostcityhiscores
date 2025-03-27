@@ -1,10 +1,13 @@
 const { createClient } = require('@supabase/supabase-js');
 const pLimit = require('p-limit');
 
-// Debug logging
-console.log('Environment variables check:');
-console.log('NEXT_PUBLIC_SUPABASE_URL defined:', !!process.env.NEXT_PUBLIC_SUPABASE_URL);
-console.log('SUPABASE_SERVICE_ROLE_KEY defined:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+// More detailed debug logging
+console.log('Environment variables detailed check:');
+console.log('Process env keys:', Object.keys(process.env));
+console.log('NEXT_PUBLIC_SUPABASE_URL type:', typeof process.env.NEXT_PUBLIC_SUPABASE_URL);
+console.log('NEXT_PUBLIC_SUPABASE_URL length:', process.env.NEXT_PUBLIC_SUPABASE_URL?.length);
+console.log('SUPABASE_SERVICE_ROLE_KEY type:', typeof process.env.SUPABASE_SERVICE_ROLE_KEY);
+console.log('SUPABASE_SERVICE_ROLE_KEY length:', process.env.SUPABASE_SERVICE_ROLE_KEY?.length);
 
 // Initialize Supabase client
 const supabase = createClient(
