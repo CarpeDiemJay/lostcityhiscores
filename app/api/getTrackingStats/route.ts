@@ -1,6 +1,20 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+interface SkillData {
+  type: number;
+  level: number;
+  rank: number;
+  value: number;
+}
+
+interface Snapshot {
+  id: number;
+  username: string;
+  created_at: string;
+  stats: SkillData[];
+}
+
 /**
  * GET /api/getTrackingStats
  * Returns:
@@ -21,16 +35,17 @@ export async function GET() {
 
     if (snapshotsError) throw snapshotsError;
 
-    // Process snapshots to get latest unique players
-    const seen = new Set<string>();
-    const latestSnapshots = allSnapshots
-      ?.filter(snapshot => {
-        const username = snapshot.username.toLowerCase();
-        if (seen.has(username)) return false;
-        seen.add(username);
-        return true;
-      })
-      .slice(0, 5) || [];
+    // Process snapshots to get latest unique players (case-insensitive)
+    const seen = new Map<string, Snapshot>();
+    allSnapshots?.forEach(snapshot => {
+      const lowerUsername = snapshot.username.toLowerCase();
+      if (!seen.has(lowerUsername)) {
+        seen.set(lowerUsername, snapshot);
+      }
+    });
+
+    // Get the 5 most recent unique players
+    const latestSnapshots = Array.from(seen.values()).slice(0, 5);
 
     return NextResponse.json({
       totalPlayers: seen.size,

@@ -61,7 +61,7 @@ const skillMeta: Record<number, { name: string; color: string; icon: string }> =
   16: { name: "Herblore",      color: "#2ecc71", icon: "/ui/Herblore_icon.png"   },
   17: { name: "Agility",       color: "#3498db", icon: "/ui/Agility_icon.png"    },
   18: { name: "Thieving",      color: "#9c27b0", icon: "/ui/Thieving_icon.png"   },
-  21: { name: "Runecrafting",  color: "#f1c40f", icon: "/ui/Runecrafting_icon.png"},
+  21: { name: "Runecrafting",  color: "#f1c40f", icon: "/ui/Runecraft_icon.png"},
 };
 
 function getMilliseconds(timeRange: string): number {
