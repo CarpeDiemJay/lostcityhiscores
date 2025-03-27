@@ -21,8 +21,8 @@ export async function GET() {
 
     if (countError) throw countError;
 
-    // Get unique usernames (latest snapshot first)
-    const uniqueUsernames = [...new Set(uniquePlayers.map(p => p.username))];
+    // Get unique usernames (case-insensitive)
+    const uniqueUsernames = [...new Set(uniquePlayers.map(p => p.username.toLowerCase()))];
     
     // Get most recent 5 players with their latest stats
     const recentPlayers = [];
@@ -30,7 +30,7 @@ export async function GET() {
       const { data: snapshots, error: playerError } = await supabase
         .from('snapshots')
         .select('*')
-        .eq('username', username)
+        .ilike('username', username) // Case-insensitive comparison
         .order('created_at', { ascending: false })
         .limit(1);
 

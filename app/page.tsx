@@ -6,7 +6,6 @@ import Navbar from "./components/Navbar"; // <--- ADJUST PATH IF NEEDED
 import TrackingStats from './components/TrackingStats';
 import SearchInput from './components/SearchInput';
 import TrackButton from './components/TrackButton';
-import RankBadge from './components/RankBadge';
 import Link from 'next/link';
 
 /**
@@ -213,15 +212,15 @@ export default function Home() {
   })();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-[#1a1b26] text-white">
+    <div className="min-h-screen bg-[#0A0B0F] text-white">
       <div className="max-w-6xl mx-auto px-4 py-16">
         {/* Hero Section */}
         <div className="text-center mb-20">
-          <Link href="/" className="inline-block">
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-[#c6aa54] to-[#e9d5a0] text-transparent bg-clip-text">
+          <a href="/" className="inline-block">
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-[#3B82F6] via-[#60A5FA] to-[#3B82F6] text-transparent bg-clip-text">
               Lost City Tracker
             </h1>
-          </Link>
+          </a>
           <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
             Track your Lost City progress. Compare your stats and share your gains!
           </p>
@@ -247,32 +246,31 @@ export default function Home() {
         {data && overall && (
           <>
             {/* Player Overview */}
-            <div className="bg-[#2c2f33]/90 backdrop-blur-sm rounded-xl border border-[#c6aa54]/50 p-8 mb-8 shadow-lg">
+            <div className="bg-[#111827]/90 backdrop-blur-sm rounded-xl border border-blue-500/20 p-8 mb-8 shadow-lg">
               <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-8">
                 <div>
                   <div className="flex items-center gap-4 mb-3">
-                    <h2 className="text-3xl font-bold text-[#c6aa54]">{username}</h2>
-                    <RankBadge rank={overall.rank} />
+                    <h2 className="text-3xl font-bold text-blue-400">{username}</h2>
                     <TrackButton onClick={startTracking} />
                   </div>
                   <p className="text-gray-400">Last updated {timeAgo(new Date(overall.date || Date.now()))}</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700/50 relative group hover:border-[#c6aa54]/30 transition-colors">
-                  <p className="text-sm text-[#c6aa54] font-medium mb-1">Rank</p>
+                <div className="bg-[#1F2937]/50 backdrop-blur-sm rounded-lg p-4 border border-blue-500/20 relative group hover:border-blue-500/40 transition-colors">
+                  <p className="text-sm text-blue-400 font-medium mb-1">Rank</p>
                   <p className="text-2xl font-bold">#{overall.rank.toLocaleString()}</p>
                 </div>
-                <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700/50 group hover:border-[#c6aa54]/30 transition-colors">
-                  <p className="text-sm text-[#c6aa54] font-medium mb-1">Combat Level</p>
+                <div className="bg-[#1F2937]/50 backdrop-blur-sm rounded-lg p-4 border border-blue-500/20 group hover:border-blue-500/40 transition-colors">
+                  <p className="text-sm text-blue-400 font-medium mb-1">Combat Level</p>
                   <p className="text-2xl font-bold">{calculateCombatLevel(data)}</p>
                 </div>
-                <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700/50 group hover:border-[#c6aa54]/30 transition-colors">
-                  <p className="text-sm text-[#c6aa54] font-medium mb-1">Total Level</p>
+                <div className="bg-[#1F2937]/50 backdrop-blur-sm rounded-lg p-4 border border-blue-500/20 group hover:border-blue-500/40 transition-colors">
+                  <p className="text-sm text-blue-400 font-medium mb-1">Total Level</p>
                   <p className="text-2xl font-bold">{overall.level}</p>
                 </div>
-                <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700/50 group hover:border-[#c6aa54]/30 transition-colors">
-                  <p className="text-sm text-[#c6aa54] font-medium mb-1">Total XP</p>
+                <div className="bg-[#1F2937]/50 backdrop-blur-sm rounded-lg p-4 border border-blue-500/20 group hover:border-blue-500/40 transition-colors">
+                  <p className="text-sm text-blue-400 font-medium mb-1">Total XP</p>
                   <p className="text-2xl font-bold">{Math.floor(overall.value / 10).toLocaleString()}</p>
                 </div>
               </div>

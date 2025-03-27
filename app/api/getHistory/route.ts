@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     const { data, error } = await supabase
       .from("snapshots")
       .select("*")
-      .eq("username", username)
+      .ilike("username", username)
       .order("created_at", { ascending: true });
 
     if (error) {

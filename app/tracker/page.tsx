@@ -11,10 +11,7 @@ import {
   ResponsiveContainer
 } from "recharts";
 import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { Popover } from '@headlessui/react';
 import SearchInput from '../components/SearchInput';
-import RankBadge from '../components/RankBadge';
 
 /** Basic shape of skill data */
 interface SkillData {
@@ -199,6 +196,13 @@ function TrackerContent() {
         return;
       }
 
+      // Debug log to see what snapshots we're getting
+      console.log('Received snapshots:', json.snapshots.map((s: Snapshot) => ({
+        id: s.id,
+        created_at: s.created_at,
+        overall_xp: s.stats.find((stat: SkillData) => stat.type === 0)?.value
+      })));
+
       // Validate snapshot format
       for (const snapshot of json.snapshots) {
         if (!snapshot.stats || !Array.isArray(snapshot.stats)) {
@@ -221,7 +225,6 @@ function TrackerContent() {
    */
   useEffect(() => {
     if (snapshots.length === 0) {
-      // Reset everything
       setXpGained(0);
       setChartData([]);
       setSkillGains([]);
@@ -230,49 +233,77 @@ function TrackerContent() {
       return;
     }
 
-    // 1) Filter by time range
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - timeRangeDays);
-
-    // Sort snapshots by date first
+    // Sort all snapshots by created_at timestamp
     const sortedSnapshots = [...snapshots].sort((a, b) => 
       new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     );
 
-    let filtered = sortedSnapshots;
-    if (timeRangeDays < 99999) {
-      filtered = sortedSnapshots.filter((snap) => {
-        const snapDate = new Date(snap.created_at);
-        return snapDate >= cutoff;
+    // Calculate the target times for comparison
+    const now = new Date();
+    const targetStartTime = new Date(now.getTime() - (timeRangeDays * 24 * 60 * 60 * 1000));
+
+    console.log('Time range targets:', {
+      start: targetStartTime.toISOString(),
+      end: now.toISOString(),
+      timeRangeDays
+    });
+
+    // Find the closest snapshots to our target times
+    const findClosestSnapshot = (target: Date, snapshots: Snapshot[]): Snapshot => {
+      return snapshots.reduce((prev, curr) => {
+        const prevDiff = Math.abs(new Date(prev.created_at).getTime() - target.getTime());
+        const currDiff = Math.abs(new Date(curr.created_at).getTime() - target.getTime());
+        return currDiff < prevDiff ? curr : prev;
       });
-    }
+    };
 
-    if (filtered.length === 0) {
-      setXpGained(0);
-      setChartData([]);
-      setSkillGains([]);
-      setEarliestSnapshotTime("");
-      setLatestSnapshotTime("");
-      return;
-    }
+    const latest = findClosestSnapshot(now, sortedSnapshots);
+    const earliest = findClosestSnapshot(targetStartTime, sortedSnapshots);
 
-    // 2) earliest & latest
-    const earliest = filtered[0];
-    const latest = filtered[filtered.length - 1];
+    console.log('Found snapshots:', {
+      earliest: {
+        id: earliest.id,
+        created_at: earliest.created_at,
+        target: targetStartTime.toISOString(),
+        diff_minutes: Math.abs(new Date(earliest.created_at).getTime() - targetStartTime.getTime()) / (60 * 1000)
+      },
+      latest: {
+        id: latest.id,
+        created_at: latest.created_at,
+        target: now.toISOString(),
+        diff_minutes: Math.abs(new Date(latest.created_at).getTime() - now.getTime()) / (60 * 1000)
+      }
+    });
 
-    // Show them in "time ago" format
     setEarliestSnapshotTime(timeAgo(new Date(earliest.created_at)));
     setLatestSnapshotTime(timeAgo(new Date(latest.created_at)));
 
-    // 3) Gains: Compare Overall XP
-    const oldOverall = earliest.stats.find(s => s.type === 0);
-    const newOverall = latest.stats.find(s => s.type === 0);
-    const oldXP = oldOverall ? xpValue(oldOverall) : 0;
-    const newXP = newOverall ? xpValue(newOverall) : 0;
-    const gained = newXP - oldXP;
+    // Calculate gains by comparing the snapshots
+    const earliestOverall = earliest.stats.find(s => s.type === 0);
+    const latestOverall = latest.stats.find(s => s.type === 0);
+    
+    if (!earliestOverall || !latestOverall) {
+      console.error('Missing overall stats in snapshots');
+      setXpGained(0);
+      return;
+    }
+
+    const earliestXP = xpValue(earliestOverall);
+    const latestXP = xpValue(latestOverall);
+
+    // Only set gains if the values are different and the snapshots are different
+    const gained = (earliest.id === latest.id) ? 0 : latestXP - earliestXP;
+    
+    console.log('XP Calculation:', {
+      earliestXP,
+      latestXP,
+      gained,
+      sameSnapshot: earliest.id === latest.id
+    });
+
     setXpGained(gained);
 
-    // 4) Build skill-by-skill Gains
+    // Build skill-by-skill gains
     const skillDiffs: {
       skillType: number;
       xpDiff: number;
@@ -280,34 +311,42 @@ function TrackerContent() {
       rankDiff: number;
     }[] = [];
 
-    for (const newSkill of latest.stats) {
-      if (newSkill.type === 0) continue; // skip Overall
-      const oldSkill = earliest.stats.find(s => s.type === newSkill.type);
-      if (!oldSkill) continue;
+    // Only calculate skill gains if we have different snapshots
+    if (earliest.id !== latest.id) {
+      for (const newSkill of latest.stats) {
+        if (newSkill.type === 0) continue; // skip Overall
+        const oldSkill = earliest.stats.find(s => s.type === newSkill.type);
+        if (!oldSkill) continue;
 
-      const newXpVal = xpValue(newSkill);
-      const oldXpVal = xpValue(oldSkill);
-      const xpDiff = newXpVal - oldXpVal;
+        const newXpVal = xpValue(newSkill);
+        const oldXpVal = xpValue(oldSkill);
+        const xpDiff = newXpVal - oldXpVal;
 
-      const levelDiff = newSkill.level - oldSkill.level;
-      const rankDiff = newSkill.rank - oldSkill.rank;
-      // negative rankDiff means improvement in rank
+        const levelDiff = newSkill.level - oldSkill.level;
+        const rankDiff = newSkill.rank - oldSkill.rank;
 
-      if (xpDiff !== 0 || levelDiff !== 0 || rankDiff !== 0) {
-        skillDiffs.push({
-          skillType: newSkill.type,
-          xpDiff,
-          levelDiff,
-          rankDiff,
-        });
+        if (xpDiff !== 0 || levelDiff !== 0 || rankDiff !== 0) {
+          skillDiffs.push({
+            skillType: newSkill.type,
+            xpDiff,
+            levelDiff,
+            rankDiff,
+          });
+        }
       }
     }
-    // Sort by xpDiff descending
+    
     skillDiffs.sort((a, b) => b.xpDiff - a.xpDiff);
     setSkillGains(skillDiffs);
 
-    // 5) Build chart data for Recharts (Overall XP)
-    const cData = filtered.map((snap) => {
+    // Build chart data - use all snapshots between earliest and latest
+    const chartSnapshots = sortedSnapshots.filter(snap => {
+      const time = new Date(snap.created_at).getTime();
+      return time >= new Date(earliest.created_at).getTime() && 
+             time <= new Date(latest.created_at).getTime();
+    });
+
+    const cData = chartSnapshots.map((snap) => {
       const overallSkill = snap.stats.find(s => s.type === 0);
       const xpVal = overallSkill ? xpValue(overallSkill) : 0;
       return {
@@ -316,12 +355,7 @@ function TrackerContent() {
       };
     });
 
-    // Only show "No data" message if we have no snapshots at all
-    if (snapshots.length === 0) {
-      setChartData([]);
-    } else {
-      setChartData(cData);
-    }
+    setChartData(cData);
 
   }, [snapshots, timeRangeDays]);
 
@@ -336,11 +370,11 @@ function TrackerContent() {
     <>
       {/* Hero Section */}
       <div className="text-center mb-20">
-        <Link href="/" className="inline-block">
+        <a href="/" className="inline-block">
           <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-[#c6aa54] to-[#e9d5a0] text-transparent bg-clip-text">
             Lost City Tracker
           </h1>
-        </Link>
+        </a>
         <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
           Track your Lost City progress. Compare your stats and share your gains!
         </p>
@@ -364,7 +398,6 @@ function TrackerContent() {
             <div>
               <div className="flex items-center gap-4 mb-3">
                 <h2 className="text-3xl font-bold text-[#c6aa54]">{username}</h2>
-                <RankBadge rank={latestOverall.rank} />
               </div>
               <p className="text-gray-400">Last updated {latestSnapshotTime}</p>
             </div>
@@ -397,28 +430,39 @@ function TrackerContent() {
             <h2 className="text-2xl font-bold text-[#c6aa54] mb-2">Progress Overview</h2>
             {snapshots.length === 0 ? (
               <p className="text-gray-400">No snapshots loaded yet.</p>
+            ) : snapshots.length === 1 ? (
+              <p className="text-yellow-400">
+                Only one snapshot available. Track your progress again to see XP gains.
+              </p>
             ) : (
               <>
                 {xpGained === 0 ? (
                   <p className="text-yellow-400">
-                    No XP gained in this timeframe (or insufficient data).
+                    No XP gained in this timeframe.
                   </p>
                 ) : (
                   <p className="text-white">
                     Gained{" "}
                     <span className="font-bold text-[#c6aa54]">{xpGained.toLocaleString()}</span>{" "}
-                    Overall XP in the last{" "}
-                    {timeRangeDays === 99999 ? "All Time" : `${timeRangeDays} days`}.
+                    Overall XP in the{" "}
+                    {timeRangeDays === 99999 ? "All Time" : 
+                     timeRangeDays === 1/24 ? "last hour" :
+                     timeRangeDays === 4/24 ? "last 4 hours" :
+                     timeRangeDays === 8/24 ? "last 8 hours" :
+                     timeRangeDays === 12/24 ? "last 12 hours" :
+                     timeRangeDays === 1 ? "last 24 hours" :
+                     timeRangeDays === 7 ? "last 7 days" :
+                     timeRangeDays === 30 ? "last 30 days" :
+                     timeRangeDays === 90 ? "last 90 days" :
+                     timeRangeDays === 365 ? "last year" : `last ${timeRangeDays} days`}
                   </p>
                 )}
-                <div className="flex gap-4 mt-2 text-sm text-gray-300">
-                  {earliestSnapshotTime && (
-                    <span>From: <span className="font-bold">{earliestSnapshotTime}</span></span>
-                  )}
-                  {latestSnapshotTime && (
-                    <span>To: <span className="font-bold">{latestSnapshotTime}</span></span>
-                  )}
-                </div>
+                {snapshots.length > 1 && (
+                  <div className="flex gap-4 mt-2 text-sm text-gray-300">
+                    <span>First snapshot: <span className="font-bold">{earliestSnapshotTime}</span></span>
+                    <span>Latest snapshot: <span className="font-bold">{latestSnapshotTime}</span></span>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -455,7 +499,7 @@ function TrackerContent() {
                     tick={{ fill: "#fff" }}
                     tickFormatter={(val) => {
                       const d = new Date(val);
-                      return d.toLocaleDateString();
+                      return `${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}`;
                     }}
                   />
                   <YAxis
