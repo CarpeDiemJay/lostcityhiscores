@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 interface SkillData {
@@ -42,19 +42,15 @@ function timeAgo(date: Date): string {
   const diffMs = now.getTime() - date.getTime();
   if (diffMs < 0) return "in the future";
 
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  if (diffMins < 1) return "just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  
+  const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+  if (diffHrs < 24) return `${diffHrs}h ago`;
+  
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const diffHrs = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
-  const diffMins = Math.floor((diffMs / (1000 * 60)) % 60);
-
-  const parts: string[] = [];
-  if (diffDays > 0) parts.push(`${diffDays}d`);
-  if (diffHrs > 0) parts.push(`${diffHrs}h`);
-  if (diffMins > 0) parts.push(`${diffMins}m`);
-
-  if (parts.length === 0) {
-    return "just now";
-  }
-  return parts.join(" ") + " ago";
+  return `${diffDays}d ago`;
 }
 
 export default function TrackingStats() {
@@ -82,89 +78,53 @@ export default function TrackingStats() {
     return () => clearInterval(interval);
   }, []);
 
-  async function handlePlayerClick(username: string, e: React.MouseEvent) {
-    e.preventDefault();
-    
-    try {
-      // First fetch latest stats
-      const res = await fetch(`/api/getStats?username=${encodeURIComponent(username)}`);
-      if (!res.ok) {
-        throw new Error('Failed to fetch latest stats');
-      }
-      const data = await res.json();
-      
-      // Then save them
-      await fetch('/api/saveStats', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, stats: data })
-      });
-      
-      // Finally redirect
-      window.location.href = `/tracker?username=${encodeURIComponent(username)}`;
-    } catch (err) {
-      console.error('Error updating player stats:', err);
-      // Still redirect even if save fails
-      window.location.href = `/tracker?username=${encodeURIComponent(username)}`;
-    }
-  }
-
   if (error) {
-    return <div className="text-red-500">{error}</div>;
+    return <div className="text-red-400">{error}</div>;
   }
 
   if (!stats) {
-    return <div>Loading tracking statistics...</div>;
+    return <div className="text-gray-400">Loading tracking statistics...</div>;
   }
 
+  // Get the most recent player
+  const latestPlayer = stats.recentPlayers[0];
+  const latestPlayerStats = latestPlayer?.stats.find(s => s.type === 0);
+
   return (
-    <div className="bg-[#2c2f33]/90 backdrop-blur-sm rounded-xl border border-[#c6aa54]/50 p-8 shadow-lg">
-      <h2 className="text-2xl font-bold text-[#c6aa54] mb-6">Tracking Statistics</h2>
-      
-      <div className="mb-6">
-        <p className="text-lg">
-          Total Players Tracked:{" "}
-          <span className="font-bold text-white">{stats.totalPlayers}</span>
-        </p>
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-7xl mx-auto">
+      <div className="bg-[#111827]/90 backdrop-blur-sm rounded-lg p-4 border border-blue-500/20 flex flex-col items-center justify-center">
+        <div className="text-3xl font-bold text-blue-400">{stats.totalPlayers}</div>
+        <div className="text-sm text-gray-400">Players Tracked</div>
       </div>
 
-      <div>
-        <h3 className="text-xl font-semibold text-[#c6aa54] mb-4">Recently Tracked Players</h3>
-        <div className="space-y-4">
-          {stats.recentPlayers.map((player) => {
-            const overall = player.stats.find(s => s.type === 0);
-            if (!overall) return null;
+      {latestPlayer && (
+        <>
+          <div className="bg-[#111827]/90 backdrop-blur-sm rounded-lg p-4 border border-blue-500/20 flex flex-col items-center justify-center">
+            <div className="text-sm text-gray-400">Latest Player</div>
+            <Link 
+              href={`/tracker?username=${encodeURIComponent(latestPlayer.username)}`}
+              className="text-lg font-semibold text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              {latestPlayer.username}
+            </Link>
+            <div className="text-xs text-gray-500 mt-1">
+              {timeAgo(new Date(latestPlayer.created_at))}
+            </div>
+          </div>
 
-            return (
-              <div key={player.id} className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700/50">
-                <div className="flex items-center justify-between mb-2">
-                  <button 
-                    onClick={(e) => handlePlayerClick(player.username, e)}
-                    className="text-[#c6aa54] hover:text-[#e9d5a0] font-semibold transition-colors"
-                  >
-                    {player.username}
-                  </button>
-                  <span className="text-gray-400 text-sm">
-                    {timeAgo(new Date(player.created_at))}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 flex items-center justify-center rounded bg-gray-900/50 p-1">
-                    <img
-                      src="/ui/Stats_icon.png"
-                      alt="Overall"
-                      className="w-full h-full"
-                    />
-                  </div>
-                  <span className="text-gray-300">
-                    Level {overall.level} ({xpValue(overall).toLocaleString()} XP)
-                  </span>
-                </div>
+          <div className="bg-[#111827]/90 backdrop-blur-sm rounded-lg p-4 border border-blue-500/20 flex flex-col items-center justify-center">
+            <div className="flex items-center gap-2">
+              <img src="/ui/Stats_icon.png" alt="Stats" className="w-4 h-4" />
+              <div className="text-blue-400">
+                Level {latestPlayerStats?.level.toLocaleString()}
               </div>
-            );
-          })}
-        </div>
-      </div>
+            </div>
+            <div className="text-sm text-gray-400 mt-1">
+              {xpValue(latestPlayerStats!).toLocaleString()} XP
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 } 

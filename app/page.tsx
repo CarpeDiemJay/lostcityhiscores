@@ -5,8 +5,10 @@ import { toPng } from "html-to-image";
 import Navbar from "./components/Navbar"; // <--- ADJUST PATH IF NEEDED
 import TrackingStats from './components/TrackingStats';
 import SearchInput from './components/SearchInput';
-import TrackButton from './components/TrackButton';
 import Link from 'next/link';
+import PlayerTracker from './components/PlayerTracker';
+import SkillCard from './components/SkillCard';
+import PlayerStats from './components/PlayerStats';
 
 /**
  * Represents a single skill's data from the hiscores API.
@@ -129,28 +131,50 @@ function calculateCombatLevel(stats: SkillData[]): number {
   return Math.floor(base + Math.max(melee, range, mage));
 }
 
+/** Get XP required for a specific level */
+function getXPForLevel(level: number): number {
+  let points = 0;
+  let output = 0;
+  for (let lvl = 1; lvl <= level; lvl++) {
+    points += Math.floor(lvl + 300 * Math.pow(2, lvl / 7));
+    if (lvl >= level) {
+      return output;
+    }
+    output = Math.floor(points / 4);
+  }
+  return output;
+}
+
+/** Get XP required for next level */
+function getNextLevelXP(level: number): number {
+  return getXPForLevel(level + 1);
+}
+
+/** Get XP required for current level */
+function getCurrentLevelXP(level: number): number {
+  return getXPForLevel(level);
+}
+
 /**
  * This is your main page component, which fetches data from /api/hiscores,
  * saves snapshots to Supabase (/api/saveStats), retrieves them (/api/getHistory),
  * and compares to a chosen snapshot (/api/getLastSnapshot or a local selection).
  */
 export default function Home() {
-  // Basic states for searching a player
   const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<SkillData[] | null>(null);
   const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState<'overview' | 'tracker'>('overview');
 
-  /**
-   * Fetch from /api/hiscores to get the player's current stats
-   */
-  async function fetchData() {
+  async function fetchAndTrackPlayer() {
     if (!username) return;
     setLoading(true);
     setError("");
     setData(null);
 
     try {
+      // Fetch current stats
       const response = await fetch(`/api/hiscores?username=${encodeURIComponent(username)}`);
       if (!response.ok) {
         throw new Error("Failed to fetch player data.");
@@ -161,35 +185,20 @@ export default function Home() {
         setError("Player not found or no data returned.");
         return;
       }
+
+      // Save stats automatically
+      await fetch('/api/saveStats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, stats: json })
+      });
+
       setData(json);
     } catch (err) {
       console.error(err);
       setError("Something went wrong while fetching hiscores.");
     } finally {
       setLoading(false);
-    }
-  }
-
-  /**
-   * Redirects to the tracker page with the current username
-   */
-  async function startTracking() {
-    if (!username) return;
-    
-    try {
-      // First try to save the current stats
-      const response = await fetch('/api/saveStats', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, stats: data })
-      });
-      
-      // Redirect to tracker page with username
-      window.location.href = `/tracker?username=${encodeURIComponent(username)}`;
-    } catch (error) {
-      console.error('Error starting tracking:', error);
-      // Still redirect even if save fails
-      window.location.href = `/tracker?username=${encodeURIComponent(username)}`;
     }
   }
 
@@ -226,9 +235,9 @@ export default function Home() {
           </p>
           <div className="max-w-2xl mx-auto">
             <SearchInput
-              value={username}
+            value={username}
               onChange={setUsername}
-              onSearch={fetchData}
+              onSearch={fetchAndTrackPlayer}
               loading={loading}
             />
           </div>
@@ -242,92 +251,76 @@ export default function Home() {
           </div>
         )}
 
-        {/* Stats Display */}
+        {/* Tabs and Content */}
         {data && overall && (
-          <>
-            {/* Player Overview */}
-            <div className="bg-[#111827]/90 backdrop-blur-sm rounded-xl border border-blue-500/20 p-8 mb-8 shadow-lg">
-              <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-8">
-                <div>
-                  <div className="flex items-center gap-4 mb-3">
-                    <h2 className="text-3xl font-bold text-blue-400">{username}</h2>
-                    <TrackButton onClick={startTracking} />
-                  </div>
-                  <p className="text-gray-400">Last updated {timeAgo(new Date(overall.date || Date.now()))}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-[#1F2937]/50 backdrop-blur-sm rounded-lg p-4 border border-blue-500/20 relative group hover:border-blue-500/40 transition-colors">
-                  <p className="text-sm text-blue-400 font-medium mb-1">Rank</p>
-                  <p className="text-2xl font-bold">#{overall.rank.toLocaleString()}</p>
-                </div>
-                <div className="bg-[#1F2937]/50 backdrop-blur-sm rounded-lg p-4 border border-blue-500/20 group hover:border-blue-500/40 transition-colors">
-                  <p className="text-sm text-blue-400 font-medium mb-1">Combat Level</p>
-                  <p className="text-2xl font-bold">{calculateCombatLevel(data)}</p>
-                </div>
-                <div className="bg-[#1F2937]/50 backdrop-blur-sm rounded-lg p-4 border border-blue-500/20 group hover:border-blue-500/40 transition-colors">
-                  <p className="text-sm text-blue-400 font-medium mb-1">Total Level</p>
-                  <p className="text-2xl font-bold">{overall.level}</p>
-                </div>
-                <div className="bg-[#1F2937]/50 backdrop-blur-sm rounded-lg p-4 border border-blue-500/20 group hover:border-blue-500/40 transition-colors">
-                  <p className="text-sm text-blue-400 font-medium mb-1">Total XP</p>
-                  <p className="text-2xl font-bold">{Math.floor(overall.value / 10).toLocaleString()}</p>
-                </div>
-              </div>
+          <div>
+            {/* Tabs */}
+            <div className="flex space-x-1 mb-8 border-b border-blue-500/20">
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={`px-6 py-3 text-sm font-medium rounded-t-lg transition-colors ${
+                  activeTab === 'overview'
+                    ? 'bg-blue-500/10 text-blue-400 border-b-2 border-blue-500'
+                    : 'text-gray-400 hover:text-blue-400 hover:bg-blue-500/5'
+                }`}
+              >
+                Overview
+              </button>
+              <button
+                onClick={() => setActiveTab('tracker')}
+                className={`px-6 py-3 text-sm font-medium rounded-t-lg transition-colors ${
+                  activeTab === 'tracker'
+                    ? 'bg-blue-500/10 text-blue-400 border-b-2 border-blue-500'
+                    : 'text-gray-400 hover:text-blue-400 hover:bg-blue-500/5'
+                }`}
+              >
+                Tracker
+              </button>
             </div>
 
-            {/* Skill Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {data
-                .filter((skill) => skill.type !== 0)
-                .map((skill) => {
-                  const meta = skillMeta[skill.type];
-                  if (!meta) return null;
+            {/* Overview Tab Content */}
+            {activeTab === 'overview' && (
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-8">
+                <PlayerStats
+                  rank={overall.rank}
+                  combatLevel={calculateCombatLevel(data)}
+                  totalLevel={overall.level}
+                  totalXP={Math.floor(overall.value / 10)}
+                />
 
-                  const level = skill.level;
-                  const xp = Math.floor(skill.value / 10);
-                  const progress = calculateProgress(level);
+                {/* Skills Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  {data?.map((skill) => {
+                    const meta = skillMeta[skill.type];
+                    if (!meta) return null;
 
-                  return (
-                    <div
-                      key={skill.type}
-                      className="group bg-[#2c2f33]/90 backdrop-blur-sm p-5 rounded-lg border border-[#c6aa54]/30 hover:border-[#c6aa54]/60 transition-all duration-300"
-                    >
-                      <div className="flex justify-between items-center mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 flex items-center justify-center rounded bg-gray-800/50 p-1.5 group-hover:bg-gray-800 transition-colors">
-                            <img
-                              src={meta.icon}
-                              alt={meta.name}
-                              className="w-full h-full"
-                            />
-                          </div>
-                          <h3 className="font-bold text-[#c6aa54] group-hover:text-[#e9d5a0] transition-colors">
-                            {meta.name}
-                          </h3>
-                        </div>
-                        <span className="text-sm font-medium bg-gray-800/50 px-2 py-1 rounded">
-                          {level}/99
-                        </span>
-                      </div>
-                      <div className="w-full h-2 bg-gray-800/50 rounded-full overflow-hidden mb-3">
-                        <div
-                          className="h-full transition-all duration-300 ease-out group-hover:opacity-90"
-                          style={{
-                            width: `${progress.toFixed(2)}%`,
-                            backgroundColor: meta.color || "#c6aa54",
-                          }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-sm text-gray-400">
-                        <span>XP: {xp.toLocaleString()}</span>
-                        <span>#{skill.rank.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
-          </>
+                    // Calculate XP progress for the progress bar
+                    const currentXP = Math.floor(skill.value / 10);
+                    const nextLevelXP = getNextLevelXP(skill.level);
+                    const currentLevelXP = getCurrentLevelXP(skill.level);
+                    const xpProgress = ((currentXP - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
+
+                    return (
+                      <SkillCard
+                        key={skill.type}
+                        name={meta.name}
+                        icon={meta.icon}
+                        level={skill.level}
+                        xp={Math.floor(skill.value / 10)}
+                        rank={skill.rank}
+                        xpProgress={xpProgress}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Tracker Tab Content */}
+            {activeTab === 'tracker' && (
+              <PlayerTracker username={username} playerData={data} />
+            )}
+          </div>
         )}
       </div>
     </div>
