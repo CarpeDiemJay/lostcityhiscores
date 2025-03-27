@@ -172,7 +172,6 @@ export default function Home() {
     const handleSearch = (event: CustomEvent<{ username: string }>) => {
       const searchUsername = event.detail.username;
       setUsername(searchUsername);
-      // We need to call fetchAndTrackPlayer with the new username immediately
       if (searchUsername) {
         setLoading(true);
         setError("");
@@ -183,12 +182,12 @@ export default function Home() {
             if (!response.ok) {
               throw new Error("Failed to fetch player data.");
             }
-            return response.json();
+            return response.json() as Promise<SkillData[]>;
           })
           .then((json: SkillData[]) => {
             if (!Array.isArray(json) || json.length === 0) {
               setError("Player not found or no data returned.");
-              return;
+              return Promise.reject("No data returned");
             }
             
             // Save stats automatically
@@ -199,10 +198,8 @@ export default function Home() {
             }).then(() => json);
           })
           .then((json: SkillData[]) => {
-            if (json) {
-              setData(json);
-              setError("");
-            }
+            setData(json);
+            setError("");
           })
           .catch(err => {
             console.error(err);
@@ -216,7 +213,7 @@ export default function Home() {
 
     window.addEventListener('search-player', handleSearch as EventListener);
     return () => window.removeEventListener('search-player', handleSearch as EventListener);
-  }, []);  // Empty dependency array since we're using the event data
+  }, []);
 
   async function fetchAndTrackPlayer() {
     if (!username) return;
