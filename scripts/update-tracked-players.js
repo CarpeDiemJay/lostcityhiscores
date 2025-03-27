@@ -47,17 +47,12 @@ async function fetchWithTimeout(url, options = {}) {
   }
 }
 
-async function tryFetchWithUsername(username, attempt = 1) {
-  const url = `https://services.runescape.com/m=hiscore_oldschool/index_lite.ws?player=${encodeURIComponent(username)}`;
-  console.log(`Trying URL: ${url} (attempt ${attempt}/${RETRY_ATTEMPTS})`);
+async function fetchPlayerStats(username, attempt = 1) {
+  const url = `https://2004.lostcity.rs/api/hiscores/player/${encodeURIComponent(username)}`;
+  console.log(`Fetching stats for ${username} (attempt ${attempt}/${RETRY_ATTEMPTS})`);
   
   try {
-    const response = await fetchWithTimeout(url, {
-      headers: {
-        'User-Agent': 'Lost City Hiscores Tracker (contact@lostcityhiscores.com)',
-        'Accept': 'text/plain'
-      }
-    });
+    const response = await fetchWithTimeout(url);
 
     if (response.status === 404) {
       console.log(`Player not found: ${username}`);
@@ -68,81 +63,27 @@ async function tryFetchWithUsername(username, attempt = 1) {
       if (attempt < RETRY_ATTEMPTS) {
         console.log(`Failed with ${response.status}, retrying in ${RETRY_DELAY/1000}s...`);
         await sleep(RETRY_DELAY);
-        return tryFetchWithUsername(username, attempt + 1);
+        return fetchPlayerStats(username, attempt + 1);
       }
       throw new Error(`Failed after ${RETRY_ATTEMPTS} attempts: ${response.status}`);
     }
     
-    const text = await response.text();
-    if (!text.includes(',')) {
-      throw new Error('Invalid response format');
+    const stats = await response.json();
+    if (!Array.isArray(stats)) {
+      throw new Error('Invalid response format: expected array');
     }
     
-    return text;
+    return stats;
   } catch (error) {
     if (error.name === 'AbortError') {
       if (attempt < RETRY_ATTEMPTS) {
         console.log(`Request timed out, retrying...`);
         await sleep(RETRY_DELAY);
-        return tryFetchWithUsername(username, attempt + 1);
+        return fetchPlayerStats(username, attempt + 1);
       }
       throw new Error(`Request timed out after ${RETRY_ATTEMPTS} attempts`);
     }
     throw error;
-  }
-}
-
-async function fetchPlayerStats(username) {
-  try {
-    // Try different username formats
-    const formats = [
-      username,                              // Original
-      username.toLowerCase(),                // Lowercase
-      username.replace(/ /g, '_'),          // Spaces to underscores
-      username.toLowerCase().replace(/ /g, '_'), // Lowercase + underscores
-      username.replace(/\s+/g, ''),         // Remove spaces
-      username.toLowerCase().replace(/\s+/g, '') // Lowercase + remove spaces
-    ];
-    
-    console.log(`\nTrying different formats for "${username}":`);
-    
-    let successText = null;
-    for (const format of formats) {
-      try {
-        const result = await tryFetchWithUsername(format);
-        if (result) {
-          console.log(`Success with format: "${format}"`);
-          successText = result;
-          break;
-        }
-      } catch (error) {
-        console.log(`Failed with format "${format}":`, error.message);
-      }
-      await sleep(1000);
-    }
-    
-    if (!successText) {
-      throw new Error(`Failed to fetch stats for ${username} (tried ${formats.length} formats)`);
-    }
-    
-    const lines = successText.trim().split('\n');
-    console.log(`Parsed ${lines.length} skill lines`);
-    
-    // Parse the CSV-like response into our stats format
-    const stats = lines.map((line, index) => {
-      const [rank, level, xp] = line.split(',').map(Number);
-      return {
-        type: index,
-        rank,
-        level,
-        value: xp
-      };
-    });
-    
-    return stats;
-  } catch (error) {
-    console.error(`Error fetching ${username}:`, error);
-    return null;
   }
 }
 
