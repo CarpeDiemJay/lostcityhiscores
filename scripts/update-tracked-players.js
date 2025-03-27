@@ -16,9 +16,9 @@ const supabase = createClient(
 );
 
 // Constants
-const RATE_LIMIT = 2; // Number of concurrent requests
+const RATE_LIMIT = 1; // Reduced to 1 concurrent request
 const RETRY_ATTEMPTS = 3;
-const RETRY_DELAY = 5000; // 5 seconds
+const RETRY_DELAY = 10000; // Increased to 10 seconds
 const REQUEST_TIMEOUT = 10000; // 10 seconds
 const BANNED_THRESHOLD = 30; // Days before considering account inactive
 
@@ -43,6 +43,11 @@ async function fetchWithTimeout(url, options = {}) {
   try {
     const response = await fetch(url, {
       ...options,
+      headers: {
+        'User-Agent': 'Lost City Hiscores Tracker (GitHub Actions)',
+        'Accept': 'application/json',
+        ...options.headers
+      },
       signal: controller.signal
     });
     return response;
@@ -57,6 +62,7 @@ async function fetchPlayerStats(username, attempt = 1) {
   
   try {
     const response = await fetchWithTimeout(url);
+    console.log(`Response status for ${username}: ${response.status}`);
 
     if (response.status === 404) {
       console.log(`Player not found: ${username}`);
