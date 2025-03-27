@@ -14,15 +14,46 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
       
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
+          cache: 'npm'
           
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm ci
+          npm install p-limit@4.0.0  # Add rate limiting package
         
       - name: Run update script
-        run: node scripts/update-tracked-players.js 
+        id: update
+        continue-on-error: true
+        run: |
+          node scripts/update-tracked-players.js
+          
+      - name: Check for failure
+        if: steps.update.outcome == 'failure'
+        run: |
+          echo "Update script failed"
+          exit 1
+
+      - name: Create Issue on Failure
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const title = 'Hourly Update Failed';
+            const body = `The hourly player update job failed at ${new Date().toISOString()}.
+            
+            Please check the [workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for more details.`;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['bug', 'automated']
+            }); 

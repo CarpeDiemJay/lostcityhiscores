@@ -8,7 +8,6 @@ import {
   CartesianGrid,
   ResponsiveContainer
 } from "recharts";
-import PlayerStats from './PlayerStats';
 
 interface PlayerTrackerProps {
   username: string;
@@ -39,6 +38,7 @@ interface SkillGain {
   newLevel: number;
   levelDiff: number;
   rankDiff: number;
+  currentRank: number;
 }
 
 const skillMeta: Record<number, { name: string; color: string; icon: string }> = {
@@ -261,7 +261,8 @@ export default function PlayerTracker({ username, playerData }: PlayerTrackerPro
             oldLevel: oldStat.level,
             newLevel: newStat.level,
             levelDiff: newStat.level - oldStat.level,
-            rankDiff
+            rankDiff,
+            currentRank: newStat.rank
           });
 
           if (newStat.type === 0) {
@@ -298,6 +299,35 @@ export default function PlayerTracker({ username, playerData }: PlayerTrackerPro
     setChartData(chartPoints);
   }
 
+  // Time range filter component
+  const TimeRangeFilter = () => (
+    <select
+      value={timeRange}
+      onChange={(e) => setTimeRange(e.target.value)}
+      className="w-32 bg-[#0A0F1A] text-[#3B82F6] border border-[#1F2937] rounded px-2 py-0.5 text-sm cursor-pointer focus:outline-none hover:border-[#3B82F6]/50 [&>option]:bg-[#0A0F1A] [&>option]:py-0"
+      style={{ 
+        WebkitAppearance: "none",
+        MozAppearance: "none",
+        appearance: "none",
+        backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233B82F6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "right 0.25rem center",
+        backgroundSize: "1em 1em",
+        paddingRight: "1.75rem"
+      }}
+    >
+      <option value="1h" className="py-0 px-1">1h</option>
+      <option value="4h" className="py-0 px-1">4h</option>
+      <option value="8h" className="py-0 px-1">8h</option>
+      <option value="24h" className="py-0 px-1">24h</option>
+      <option value="7d" className="py-0 px-1">7 days</option>
+      <option value="1m" className="py-0 px-1">1 month</option>
+      <option value="3m" className="py-0 px-1">3 months</option>
+      <option value="6m" className="py-0 px-1">6 months</option>
+      <option value="1y" className="py-0 px-1">1 year</option>
+    </select>
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -316,20 +346,22 @@ export default function PlayerTracker({ username, playerData }: PlayerTrackerPro
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-      {/* Player Stats Header */}
-      <PlayerStats
-        rank={overall?.rank || 0}
-        combatLevel={combatLevel}
-        totalLevel={overall?.level || 0}
-        totalXP={Math.floor((overall?.value || 0) / 10)}
-      />
+      {/* Auto-enrollment Info */}
+      <div className="text-sm text-gray-400 bg-[#111827]/90 backdrop-blur-sm rounded-xl border border-blue-500/20 p-4">
+        <div className="flex items-center gap-2">
+          <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Your account is automatically enrolled in hourly tracking once you search for your username.</span>
+        </div>
+      </div>
 
-      {/* Progress Overview */}
-      <div className="bg-[#111827]/90 backdrop-blur-sm rounded-xl border border-blue-500/20 p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 mb-6">
+      {/* Skill Gains */}
+      <div className="bg-[#111827]/90 backdrop-blur-sm rounded-xl border border-blue-500/20 p-2 sm:p-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 mb-4 px-2">
           <div>
-            <h2 className="text-xl font-bold text-blue-400 mb-2">Progress Overview</h2>
-            <div className="text-sm text-gray-400">
+            <h2 className="text-lg font-bold text-blue-400">Skill Gains</h2>
+            <div className="text-sm text-gray-400 mt-1">
               {xpGained > 0 ? (
                 <span>Gained {xpGained.toLocaleString()} Overall XP in the last {
                   timeRange === "1h" ? "hour" :
@@ -346,38 +378,85 @@ export default function PlayerTracker({ username, playerData }: PlayerTrackerPro
                 <span>No XP gains in the selected time period</span>
               )}
             </div>
-            {firstSnapshot && (
-              <div className="text-xs text-gray-500 mt-1">
-                First snapshot: {firstSnapshot}<br />
-                Latest snapshot: {latestSnapshot}
-              </div>
-            )}
           </div>
-          <select
-            value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
-            className="w-32 bg-[#0A0F1A] text-[#3B82F6] border border-[#1F2937] rounded px-2 py-0.5 text-sm cursor-pointer focus:outline-none hover:border-[#3B82F6]/50 [&>option]:bg-[#0A0F1A] [&>option]:py-0"
-            style={{ 
-              WebkitAppearance: "none",
-              MozAppearance: "none",
-              appearance: "none",
-              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233B82F6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "right 0.25rem center",
-              backgroundSize: "1em 1em",
-              paddingRight: "1.75rem"
-            }}
-          >
-            <option value="1h" className="py-0 px-1">1h</option>
-            <option value="4h" className="py-0 px-1">4h</option>
-            <option value="8h" className="py-0 px-1">8h</option>
-            <option value="24h" className="py-0 px-1">24h</option>
-            <option value="7d" className="py-0 px-1">7 days</option>
-            <option value="1m" className="py-0 px-1">1 month</option>
-            <option value="3m" className="py-0 px-1">3 months</option>
-            <option value="6m" className="py-0 px-1">6 months</option>
-            <option value="1y" className="py-0 px-1">1 year</option>
-          </select>
+          <TimeRangeFilter />
+        </div>
+        <div className="overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="text-left text-gray-400 border-b border-blue-500/20 text-sm">
+                <th className="py-1 px-2 font-medium">Skill</th>
+                <th className="py-1 px-2 font-medium text-right">Exp.</th>
+                <th className="py-1 px-2 font-medium text-right">Lvls</th>
+                <th className="py-1 px-2 font-medium text-right">Rank</th>
+              </tr>
+            </thead>
+            <tbody>
+              {skillGains.map((gain) => {
+                const meta = skillMeta[gain.skillType];
+                if (!meta) return null;
+
+                return (
+                  <tr key={gain.skillType} className="border-b border-blue-500/10 text-sm hover:bg-blue-500/5">
+                    <td className="py-1 px-2">
+                      <div className="flex items-center gap-1.5">
+                        <img
+                          src={meta.icon}
+                          alt={meta.name}
+                          className="w-3.5 h-3.5"
+                        />
+                        <span className="text-blue-400 truncate">{meta.name}</span>
+                      </div>
+                    </td>
+                    <td className="py-1 px-2 text-right tabular-nums">
+                      {gain.xpDiff > 0 ? (
+                        <span className="text-green-400">+{gain.xpDiff.toLocaleString()}</span>
+                      ) : '0'}
+                    </td>
+                    <td className="py-1 px-2 text-right tabular-nums">
+                      {gain.levelDiff > 0 ? (
+                        <span className="text-green-400">+{gain.levelDiff}</span>
+                      ) : (
+                        '0'
+                      )}
+                    </td>
+                    <td className="py-1 px-2 text-right tabular-nums">
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="text-gray-400">#{gain.currentRank.toLocaleString()}</span>
+                        {gain.rankDiff > 0 ? (
+                          <span className="text-green-400">+{gain.rankDiff}</span>
+                        ) : gain.rankDiff < 0 ? (
+                          <span className="text-red-400">{gain.rankDiff}</span>
+                        ) : (
+                          <span>0</span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {skillGains.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="text-center py-3 text-gray-400 text-sm">
+                    No gains in the selected time period
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Experience Timeline */}
+      <div className="bg-[#111827]/90 backdrop-blur-sm rounded-xl border border-blue-500/20 p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 mb-6">
+          <div>
+            <h2 className="text-xl font-bold text-blue-400 mb-2">Experience Timeline</h2>
+            <div className="text-sm text-gray-400">
+              Track your progression over time with our detailed experience timeline. This chart visualizes your total XP gains, helping you monitor your growth and achievements.
+            </div>
+          </div>
+          <TimeRangeFilter />
         </div>
 
         <div className="h-[250px] sm:h-[300px] w-full">
@@ -423,70 +502,6 @@ export default function PlayerTracker({ username, playerData }: PlayerTrackerPro
               />
             </LineChart>
           </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Skill Gains */}
-      <div className="bg-[#111827]/90 backdrop-blur-sm rounded-xl border border-blue-500/20 p-2 sm:p-4">
-        <h2 className="text-lg font-bold text-blue-400 mb-2 px-2">Skill Gains</h2>
-        <div className="overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="text-left text-gray-400 border-b border-blue-500/20 text-sm">
-                <th className="py-1 px-2 font-medium">Skill</th>
-                <th className="py-1 px-2 font-medium text-right">Exp.</th>
-                <th className="py-1 px-2 font-medium text-right">Lvls</th>
-                <th className="py-1 px-2 font-medium text-right">Rank</th>
-              </tr>
-            </thead>
-            <tbody>
-              {skillGains.map((gain) => {
-                const meta = skillMeta[gain.skillType];
-                if (!meta) return null;
-
-                return (
-                  <tr key={gain.skillType} className="border-b border-blue-500/10 text-sm hover:bg-blue-500/5">
-                    <td className="py-1 px-2">
-                      <div className="flex items-center gap-1.5">
-                        <img
-                          src={meta.icon}
-                          alt={meta.name}
-                          className="w-3.5 h-3.5"
-                        />
-                        <span className="text-blue-400 truncate">{meta.name}</span>
-                      </div>
-                    </td>
-                    <td className="py-1 px-2 text-right tabular-nums">
-                      {gain.xpDiff > 0 ? `+${gain.xpDiff.toLocaleString()}` : '0'}
-                    </td>
-                    <td className="py-1 px-2 text-right tabular-nums">
-                      {gain.levelDiff > 0 ? (
-                        <span className="text-green-400">+{gain.levelDiff}</span>
-                      ) : (
-                        '0'
-                      )}
-                    </td>
-                    <td className="py-1 px-2 text-right tabular-nums">
-                      {gain.rankDiff > 0 ? (
-                        <span className="text-green-400">+{gain.rankDiff}</span>
-                      ) : gain.rankDiff < 0 ? (
-                        <span className="text-red-400">{gain.rankDiff}</span>
-                      ) : (
-                        '0'
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-              {skillGains.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="text-center py-3 text-gray-400 text-sm">
-                    No gains in the selected time period
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
         </div>
       </div>
     </div>

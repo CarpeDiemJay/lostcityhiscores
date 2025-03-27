@@ -9,7 +9,7 @@ interface SkillCardProps {
 
 export default function SkillCard({ name, icon, level, xp, rank, xpProgress = 0 }: SkillCardProps) {
   return (
-    <div className="bg-[#0A0F1A] rounded-lg border border-[#1F2937] p-3 flex flex-col gap-2">
+    <div className="bg-[#111827]/90 backdrop-blur-sm rounded-lg border border-blue-500/20 p-3 flex flex-col gap-2">
       <div className="flex items-center gap-2">
         <img src={icon} alt={name} className="w-4 h-4" />
         <span className="text-blue-400 text-sm font-medium">{name}</span>

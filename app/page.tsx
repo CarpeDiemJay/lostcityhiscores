@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { toPng } from "html-to-image";
+import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "./components/Navbar"; // <--- ADJUST PATH IF NEEDED
 import TrackingStats from './components/TrackingStats';
 import SearchInput from './components/SearchInput';
@@ -222,106 +223,159 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#0A0B0F] text-white">
-      <div className="max-w-6xl mx-auto px-4 py-16">
-        {/* Hero Section */}
-        <div className="text-center mb-20">
-          <a href="/" className="inline-block">
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-[#3B82F6] via-[#60A5FA] to-[#3B82F6] text-transparent bg-clip-text">
-              Lost City Tracker
-            </h1>
-          </a>
-          <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
-            Track your Lost City progress. Compare your stats and share your gains!
-          </p>
-          <div className="max-w-2xl mx-auto">
-            <SearchInput
-            value={username}
-              onChange={setUsername}
-              onSearch={fetchAndTrackPlayer}
-              loading={loading}
-            />
-          </div>
-          {error && <p className="mt-4 text-red-400">{error}</p>}
-        </div>
+      <div className="max-w-6xl mx-auto px-4 py-8 md:py-16">
+        {/* Title - Always visible */}
+        <a href="/" className="block text-center mb-12">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-[#3B82F6] via-[#60A5FA] to-[#3B82F6] text-transparent bg-clip-text">
+            Lost City Tracker
+          </h1>
+        </a>
 
-        {/* Default View: Tracking Statistics */}
-        {!data && (
-          <div className="max-w-2xl mx-auto">
-            <TrackingStats />
-          </div>
-        )}
-
-        {/* Tabs and Content */}
-        {data && overall && (
-          <div>
-            {/* Tabs */}
-            <div className="flex space-x-1 mb-8 border-b border-blue-500/20">
-              <button
-                onClick={() => setActiveTab('overview')}
-                className={`px-6 py-3 text-sm font-medium rounded-t-lg transition-colors ${
-                  activeTab === 'overview'
-                    ? 'bg-blue-500/10 text-blue-400 border-b-2 border-blue-500'
-                    : 'text-gray-400 hover:text-blue-400 hover:bg-blue-500/5'
-                }`}
-              >
-                Overview
-              </button>
-              <button
-                onClick={() => setActiveTab('tracker')}
-                className={`px-6 py-3 text-sm font-medium rounded-t-lg transition-colors ${
-                  activeTab === 'tracker'
-                    ? 'bg-blue-500/10 text-blue-400 border-b-2 border-blue-500'
-                    : 'text-gray-400 hover:text-blue-400 hover:bg-blue-500/5'
-                }`}
-              >
-                Tracker
-              </button>
-            </div>
-
-            {/* Overview Tab Content */}
-            {activeTab === 'overview' && (
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-8">
-                <PlayerStats
-                  rank={overall.rank}
-                  combatLevel={calculateCombatLevel(data)}
-                  totalLevel={overall.level}
-                  totalXP={Math.floor(overall.value / 10)}
+        <AnimatePresence mode="wait">
+          {!data || !overall ? (
+            /* Initial Search View */
+            <motion.div
+              key="search"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="text-center"
+            >
+              <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
+                Track your Lost City progress. Compare your stats and share your gains!
+              </p>
+              <div className="max-w-2xl mx-auto">
+                <SearchInput
+                  value={username}
+                  onChange={setUsername}
+                  onSearch={fetchAndTrackPlayer}
+                  loading={loading}
                 />
-
-                {/* Skills Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                  {data?.map((skill) => {
-                    const meta = skillMeta[skill.type];
-                    if (!meta) return null;
-
-                    // Calculate XP progress for the progress bar
-                    const currentXP = Math.floor(skill.value / 10);
-                    const nextLevelXP = getNextLevelXP(skill.level);
-                    const currentLevelXP = getCurrentLevelXP(skill.level);
-                    const xpProgress = ((currentXP - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
-
-                    return (
-                      <SkillCard
-                        key={skill.type}
-                        name={meta.name}
-                        icon={meta.icon}
-                        level={skill.level}
-                        xp={Math.floor(skill.value / 10)}
-                        rank={skill.rank}
-                        xpProgress={xpProgress}
-                      />
-                    );
-                  })}
+              </div>
+              {error && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="mt-4 text-red-400"
+                >
+                  {error}
+                </motion.p>
+              )}
+              {!data && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="max-w-2xl mx-auto mt-16"
+                >
+                  <TrackingStats />
+                </motion.div>
+              )}
+            </motion.div>
+          ) : (
+            /* Player Data View */
+            <motion.div
+              key="player-data"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              {/* Tabs with Player Name */}
+              <div className="flex items-center justify-between mb-8 border-b border-blue-500/20">
+                <div className="flex space-x-1">
+                  <motion.button
+                    whileHover={{ backgroundColor: "rgba(59, 130, 246, 0.1)" }}
+                    onClick={() => setActiveTab('overview')}
+                    className={`px-6 py-3 text-sm font-medium rounded-t-lg transition-colors ${
+                      activeTab === 'overview'
+                        ? 'bg-blue-500/10 text-blue-400 border-b-2 border-blue-500'
+                        : 'text-gray-400 hover:text-blue-400'
+                    }`}
+                  >
+                    Overview
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ backgroundColor: "rgba(59, 130, 246, 0.1)" }}
+                    onClick={() => setActiveTab('tracker')}
+                    className={`px-6 py-3 text-sm font-medium rounded-t-lg transition-colors ${
+                      activeTab === 'tracker'
+                        ? 'bg-blue-500/10 text-blue-400 border-b-2 border-blue-500'
+                        : 'text-gray-400 hover:text-blue-400'
+                    }`}
+                  >
+                    Tracker
+                  </motion.button>
+                </div>
+                <div className="px-6 py-3">
+                  <h2 className="text-lg font-bold text-blue-400">{username}</h2>
                 </div>
               </div>
-            )}
 
-            {/* Tracker Tab Content */}
-            {activeTab === 'tracker' && (
-              <PlayerTracker username={username} playerData={data} />
-            )}
-          </div>
-        )}
+              {/* Tab Content */}
+              <AnimatePresence mode="wait">
+                {activeTab === 'overview' ? (
+                  <motion.div
+                    key="overview"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-8"
+                  >
+                    <PlayerStats
+                      rank={overall.rank}
+                      combatLevel={calculateCombatLevel(data)}
+                      totalLevel={overall.level}
+                      totalXP={Math.floor(overall.value / 10)}
+                    />
+
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.2 }}
+                      className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3"
+                    >
+                      {data?.map((skill, index) => {
+                        const meta = skillMeta[skill.type];
+                        if (!meta) return null;
+
+                        const currentXP = Math.floor(skill.value / 10);
+                        const nextLevelXP = getNextLevelXP(skill.level);
+                        const currentLevelXP = getCurrentLevelXP(skill.level);
+                        const xpProgress = ((currentXP - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
+
+                        return (
+                          <motion.div
+                            key={skill.type}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                          >
+                            <SkillCard
+                              name={meta.name}
+                              icon={meta.icon}
+                              level={skill.level}
+                              xp={currentXP}
+                              rank={skill.rank}
+                              xpProgress={xpProgress}
+                            />
+                          </motion.div>
+                        );
+                      })}
+                    </motion.div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="tracker"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                  >
+                    <PlayerTracker username={username} playerData={data} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
