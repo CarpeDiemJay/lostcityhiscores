@@ -1,8 +1,8 @@
-name: Hourly Player Updates
+name: Player Stats Updates
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Run every hour
+    - cron: '0 */6 * * *'  # Run every 6 hours
   workflow_dispatch:      # Allow manual triggers
 
 permissions:
@@ -45,6 +45,6 @@ jobs:
             github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: 'Hourly Update Failed',
-              body: `The hourly player update failed at ${new Date().toISOString()}. Please check the [workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) for details.`
+              title: 'Stats Update Failed',
+              body: `The player stats update failed at ${new Date().toISOString()}. Please check the [workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) for details.`
             }); 
