@@ -352,7 +352,7 @@ export default function PlayerTracker({ username, playerData }: PlayerTrackerPro
           <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <span>Your account is automatically enrolled in hourly tracking once you search for your username.</span>
+          <span>Your account is automatically enrolled in tracking (updates every 6 hours) once you search for your username.</span>
         </div>
       </div>
 
@@ -440,7 +440,7 @@ export default function PlayerTracker({ username, playerData }: PlayerTrackerPro
                   <td colSpan={4} className="text-center py-3 text-gray-400 text-sm">
                     {snapshots.length <= 1 ? (
                       <>
-                        No historical data yet. Check back in an hour - we'll start tracking your progress automatically.
+                        No historical data yet. Check back in 6 hours - we'll start tracking your progress automatically.
                       </>
                     ) : (
                       <>
