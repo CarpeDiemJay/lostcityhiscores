@@ -19,7 +19,7 @@ interface Snapshot {
  * GET /api/getTrackingStats
  * Returns:
  * - Total unique players being tracked
- * - List of 5 most recently added players (based on first appearance) with their latest stats
+ * - The most recently added player with their latest stats
  */
 export async function GET() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -27,45 +27,58 @@ export async function GET() {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    // Get all snapshots ordered by creation time to find first appearances
-    const { data: allSnapshots, error: snapshotsError } = await supabase
-      .from('snapshots')
-      .select('*')
-      .order('created_at', { ascending: true });
+    console.log('Fetching tracking stats...');
 
-    if (snapshotsError) throw snapshotsError;
+    // Get all usernames using pagination to bypass the 1000 row limit
+    let allUsernames: string[] = [];
+    let page = 0;
+    const pageSize = 1000;
+    
+    while (true) {
+      const { data, error } = await supabase
+        .from('snapshots')
+        .select('username')
+        .range(page * pageSize, (page + 1) * pageSize - 1)
+        .throwOnError();
 
-    // Track first appearance and latest snapshot for each player
-    const firstAppearance = new Map<string, { username: string; created_at: string }>();
-    const latestSnapshot = new Map<string, Snapshot>();
-
-    allSnapshots?.forEach(snapshot => {
-      const lowerUsername = snapshot.username.toLowerCase();
-      
-      // Track first appearance
-      if (!firstAppearance.has(lowerUsername)) {
-        firstAppearance.set(lowerUsername, {
-          username: snapshot.username,
-          created_at: snapshot.created_at
-        });
+      if (error) {
+        console.error('Error getting player data:', error);
+        throw error;
       }
 
-      // Always update latest snapshot
-      latestSnapshot.set(lowerUsername, snapshot);
-    });
+      if (!data || data.length === 0) break;
 
-    // Get the 5 most recently added players (based on first appearance)
-    // but return their latest stats
-    const recentlyAdded = Array.from(firstAppearance.entries())
-      .sort((a, b) => new Date(b[1].created_at).getTime() - new Date(a[1].created_at).getTime())
-      .slice(0, 5)
-      .map(([lowerUsername, firstSearch]) => {
-        return latestSnapshot.get(lowerUsername)!;
-      });
+      allUsernames = allUsernames.concat(data.map(row => row.username));
+      if (data.length < pageSize) break;
+      page++;
+    }
+
+    // Count unique usernames (case insensitive)
+    const uniqueUsernames = new Set(allUsernames.map(username => username.toLowerCase()));
+    const totalPlayers = uniqueUsernames.size;
+    console.log('Total unique players:', totalPlayers);
+    console.log('Unique usernames:', Array.from(uniqueUsernames).sort());
+    console.log('Total snapshots:', allUsernames.length);
+
+    // Get the most recent snapshot
+    const { data: latestData, error: latestError } = await supabase
+      .from('snapshots')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .throwOnError();
+
+    if (latestError) throw latestError;
 
     return NextResponse.json({
-      totalPlayers: firstAppearance.size,
-      recentPlayers: recentlyAdded
+      totalPlayers,
+      recentPlayers: latestData || []
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
     });
   } catch (err: any) {
     console.error("Error in getTrackingStats:", err);
