@@ -1,18 +1,15 @@
 import { Overview } from './components/Overview';
 
-interface PageProps {
-  params: { };
-  searchParams: { 
-    username?: string;
-  };
-}
-
 export const metadata = {
   title: 'Lost City Tracker',
   description: 'Track your Lost City progress. Compare stats, track XP gains, and more.',
 };
 
-export default function Home({ searchParams }: PageProps) {
+export default function Home({
+  searchParams,
+}: {
+  searchParams: { username?: string }
+}) {
   const username = searchParams.username || '';
   
   return (
