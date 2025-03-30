@@ -36,53 +36,72 @@ export async function POST(request: Request) {
       .order("created_at", { ascending: false })
       .limit(1);
 
-    if (lastSnapshot?.length) {
-      const lastUpdate = new Date(lastSnapshot[0].created_at);
-      const minutesSinceUpdate = (Date.now() - lastUpdate.getTime()) / (1000 * 60);
-      
-      // If it's been less than MIN_UPDATE_INTERVAL minutes, return the existing snapshot
-      if (minutesSinceUpdate < MIN_UPDATE_INTERVAL) {
-        return NextResponse.json({ 
-          success: true, 
-          snapshot: lastSnapshot[0],
-          message: "Using recent snapshot" 
-        });
+    // For manual searches, always create a new snapshot
+    if (!lastSnapshot?.length) {
+      // Insert a new snapshot
+      const { data, error } = await supabase
+        .from("snapshots")
+        .insert([{ username, stats }])
+        .select("*");
+
+      if (error) {
+        console.error("Supabase insert error:", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
       }
 
-      // Check if account might be inactive
-      const daysSinceUpdate = minutesSinceUpdate / (24 * 60);
-      if (daysSinceUpdate > BANNED_THRESHOLD) {
-        const { data: recentSnapshots } = await supabase
-          .from("snapshots")
-          .select("stats")
-          .eq("username", username)
-          .order("created_at", { ascending: false })
-          .limit(2);
+      return NextResponse.json({ 
+        success: true, 
+        snapshot: data?.[0],
+        message: "New snapshot created" 
+      });
+    }
 
-        if (recentSnapshots && recentSnapshots.length >= 2) {
-          const noXpGain = JSON.stringify(recentSnapshots[0].stats) === JSON.stringify(recentSnapshots[1].stats);
-          if (noXpGain) {
-            return NextResponse.json({ 
-              success: true, 
-              snapshot: lastSnapshot[0],
-              message: "Account appears inactive" 
-            });
-          }
+    // For automated updates, apply the restrictions
+    const lastUpdate = new Date(lastSnapshot[0].created_at);
+    const minutesSinceUpdate = (Date.now() - lastUpdate.getTime()) / (1000 * 60);
+    
+    // If it's been less than MIN_UPDATE_INTERVAL minutes, return the existing snapshot
+    if (minutesSinceUpdate < MIN_UPDATE_INTERVAL) {
+      return NextResponse.json({ 
+        success: true, 
+        snapshot: lastSnapshot[0],
+        message: "Using recent snapshot" 
+      });
+    }
+
+    // Check if account might be inactive
+    const daysSinceUpdate = minutesSinceUpdate / (24 * 60);
+    if (daysSinceUpdate > BANNED_THRESHOLD) {
+      const { data: recentSnapshots } = await supabase
+        .from("snapshots")
+        .select("stats")
+        .eq("username", username)
+        .order("created_at", { ascending: false })
+        .limit(2);
+
+      if (recentSnapshots && recentSnapshots.length >= 2) {
+        const noXpGain = JSON.stringify(recentSnapshots[0].stats) === JSON.stringify(recentSnapshots[1].stats);
+        if (noXpGain) {
+          return NextResponse.json({ 
+            success: true, 
+            snapshot: lastSnapshot[0],
+            message: "Account appears inactive" 
+          });
         }
       }
+    }
 
-      // Calculate XP gained
-      const oldOverall = lastSnapshot[0].stats.find((s: SkillData) => s.type === 0)?.value || 0;
-      const newOverall = stats.find((s: SkillData) => s.type === 0)?.value || 0;
-      
-      // If no XP gained, return existing snapshot
-      if (newOverall <= oldOverall) {
-        return NextResponse.json({ 
-          success: true, 
-          snapshot: lastSnapshot[0],
-          message: "No XP gained" 
-        });
-      }
+    // Calculate XP gained
+    const oldOverall = lastSnapshot[0].stats.find((s: SkillData) => s.type === 0)?.value || 0;
+    const newOverall = stats.find((s: SkillData) => s.type === 0)?.value || 0;
+    
+    // If no XP gained, return existing snapshot
+    if (newOverall <= oldOverall) {
+      return NextResponse.json({ 
+        success: true, 
+        snapshot: lastSnapshot[0],
+        message: "No XP gained" 
+      });
     }
 
     // Insert a new snapshot
