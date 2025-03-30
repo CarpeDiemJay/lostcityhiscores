@@ -27,20 +27,20 @@ export async function GET() {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    // First get all unique usernames with their first search time
+    // Get all unique usernames with their latest update time
     const { data: uniqueUsers, error: uniqueError } = await supabase
       .from('snapshots')
       .select('username, created_at')
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: false });
 
     if (uniqueError) throw uniqueError;
 
-    // Create a map of lowercase username to their first occurrence details
-    const firstSearches = new Map<string, { username: string; created_at: string }>();
+    // Create a map of lowercase username to their latest update details
+    const latestUpdates = new Map<string, { username: string; created_at: string }>();
     uniqueUsers?.forEach(snapshot => {
       const lowerUsername = snapshot.username.toLowerCase();
-      if (!firstSearches.has(lowerUsername)) {
-        firstSearches.set(lowerUsername, {
+      if (!latestUpdates.has(lowerUsername)) {
+        latestUpdates.set(lowerUsername, {
           username: snapshot.username, // Keep original casing
           created_at: snapshot.created_at
         });
@@ -64,20 +64,13 @@ export async function GET() {
       }
     });
 
-    // Combine the data: use latest stats but sort by first search time
-    const combinedSnapshots = Array.from(firstSearches.entries())
-      .sort((a, b) => new Date(b[1].created_at).getTime() - new Date(a[1].created_at).getTime())
-      .slice(0, 5)
-      .map(([lowerUsername, firstSearch]) => {
-        const latestSnapshot = latestByUsername.get(lowerUsername);
-        return {
-          ...latestSnapshot,
-          username: firstSearch.username // Use the original casing from first search
-        };
-      });
+    // Combine the data: use latest stats and sort by most recent update time
+    const combinedSnapshots = Array.from(latestByUsername.values())
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 5);
 
     return NextResponse.json({
-      totalPlayers: firstSearches.size,
+      totalPlayers: latestUpdates.size,
       recentPlayers: combinedSnapshots
     });
   } catch (err: any) {
