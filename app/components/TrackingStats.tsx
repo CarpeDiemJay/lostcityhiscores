@@ -138,18 +138,31 @@ export default function TrackingStats() {
             className="bg-[#111827]/90 backdrop-blur-sm rounded-lg p-4 border border-blue-500/20 flex flex-col items-center justify-center"
           >
             <div className="text-sm text-gray-400">Latest Player</div>
-            <button 
-              onClick={() => {
+            <Link 
+              href={`/user/${encodeURIComponent(latestPlayer.username)}`}
+              onClick={(e) => {
+                e.preventDefault(); // Prevent the default navigation
+                // First set the username
                 window.dispatchEvent(
                   new CustomEvent('search-player', { 
                     detail: { username: latestPlayer.username }
                   })
                 );
+                // Then trigger the search after a small delay to ensure state is updated
+                setTimeout(() => {
+                  window.dispatchEvent(
+                    new CustomEvent('trigger-search', { 
+                      detail: { username: latestPlayer.username }
+                    })
+                  );
+                }, 0);
+                // Update the URL without a full page reload
+                window.history.pushState({}, '', `/user/${encodeURIComponent(latestPlayer.username)}`);
               }}
               className="text-lg font-semibold text-blue-400 hover:text-blue-300 transition-colors"
             >
               {latestPlayer.username}
-            </button>
+            </Link>
             <div className="text-xs text-gray-500 mt-1">
               {timeAgo(new Date(latestPlayer.created_at))}
             </div>
