@@ -5,12 +5,13 @@ export const metadata = {
   description: 'Track your Lost City progress. Compare stats, track XP gains, and more.',
 };
 
-export default function Home({
-  searchParams,
-}: {
-  searchParams: { username?: string }
-}) {
-  const username = searchParams.username || '';
+type Props = {
+  params: { [key: string]: string | string[] | undefined };
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
+export default function Home({ searchParams }: Props) {
+  const username = typeof searchParams.username === 'string' ? searchParams.username : '';
   
   return (
     <main className="flex min-h-screen flex-col items-center p-4 md:p-24">
