@@ -21,6 +21,7 @@ const RETRY_ATTEMPTS = 3;
 const RETRY_DELAY = 10000; // Increased to 10 seconds
 const REQUEST_TIMEOUT = 10000; // 10 seconds
 const BANNED_THRESHOLD = 30; // Days before considering account inactive
+const MIN_UPDATE_INTERVAL = 30; // Minutes between updates for the same player
 
 // Metrics
 let metrics = {
@@ -101,7 +102,7 @@ async function shouldUpdatePlayer(username) {
   // Check last update time
   const { data: lastSnapshot } = await supabase
     .from('snapshots')
-    .select('created_at')
+    .select('created_at, stats')
     .eq('username', username)
     .order('created_at', { ascending: false })
     .limit(1);
@@ -109,10 +110,18 @@ async function shouldUpdatePlayer(username) {
   if (!lastSnapshot?.length) return true;
 
   const lastUpdate = new Date(lastSnapshot[0].created_at);
-  const hoursSinceUpdate = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60);
+  const minutesSinceUpdate = (Date.now() - lastUpdate.getTime()) / (1000 * 60);
+  
+  // If it's been less than MIN_UPDATE_INTERVAL minutes, skip
+  if (minutesSinceUpdate < MIN_UPDATE_INTERVAL) {
+    console.log(`${username} updated recently, skipping...`);
+    metrics.skippedPlayers++;
+    return false;
+  }
 
-  // Check if account might be banned/inactive
-  if (hoursSinceUpdate > BANNED_THRESHOLD * 24) {
+  // Check if account might be inactive
+  const daysSinceUpdate = minutesSinceUpdate / (24 * 60);
+  if (daysSinceUpdate > BANNED_THRESHOLD) {
     const { data: recentSnapshots } = await supabase
       .from('snapshots')
       .select('stats')
