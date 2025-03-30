@@ -5,12 +5,14 @@ export const metadata = {
   description: 'Track your Lost City progress. Compare stats, track XP gains, and more.',
 };
 
-type Props = {
-  params: { [key: string]: string | string[] | undefined };
-  searchParams: { [key: string]: string | string[] | undefined };
-}
+// Use the correct Next.js types for App Router
+type SearchParams = { [key: string]: string | string[] | undefined };
 
-export default function Home({ searchParams }: Props) {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
   const username = typeof searchParams.username === 'string' ? searchParams.username : '';
   
   return (
