@@ -19,7 +19,7 @@ interface Snapshot {
  * GET /api/getTrackingStats
  * Returns:
  * - Total unique players being tracked
- * - List of 5 most recently tracked players with their latest stats
+ * - List of 5 most recently added players (based on first appearance) with their latest stats
  */
 export async function GET() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -27,51 +27,45 @@ export async function GET() {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    // Get all unique usernames with their latest update time
-    const { data: uniqueUsers, error: uniqueError } = await supabase
-      .from('snapshots')
-      .select('username, created_at')
-      .order('created_at', { ascending: false });
-
-    if (uniqueError) throw uniqueError;
-
-    // Create a map of lowercase username to their latest update details
-    const latestUpdates = new Map<string, { username: string; created_at: string }>();
-    uniqueUsers?.forEach(snapshot => {
-      const lowerUsername = snapshot.username.toLowerCase();
-      if (!latestUpdates.has(lowerUsername)) {
-        latestUpdates.set(lowerUsername, {
-          username: snapshot.username, // Keep original casing
-          created_at: snapshot.created_at
-        });
-      }
-    });
-
-    // Get the latest snapshot for each unique username
-    const { data: latestSnapshots, error: snapshotsError } = await supabase
+    // Get all snapshots ordered by creation time to find first appearances
+    const { data: allSnapshots, error: snapshotsError } = await supabase
       .from('snapshots')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: true });
 
     if (snapshotsError) throw snapshotsError;
 
-    // Create a map of lowercase username to their latest snapshot
-    const latestByUsername = new Map<string, Snapshot>();
-    latestSnapshots?.forEach(snapshot => {
+    // Track first appearance and latest snapshot for each player
+    const firstAppearance = new Map<string, { username: string; created_at: string }>();
+    const latestSnapshot = new Map<string, Snapshot>();
+
+    allSnapshots?.forEach(snapshot => {
       const lowerUsername = snapshot.username.toLowerCase();
-      if (!latestByUsername.has(lowerUsername)) {
-        latestByUsername.set(lowerUsername, snapshot);
+      
+      // Track first appearance
+      if (!firstAppearance.has(lowerUsername)) {
+        firstAppearance.set(lowerUsername, {
+          username: snapshot.username,
+          created_at: snapshot.created_at
+        });
       }
+
+      // Always update latest snapshot
+      latestSnapshot.set(lowerUsername, snapshot);
     });
 
-    // Combine the data: use latest stats and sort by most recent update time
-    const combinedSnapshots = Array.from(latestByUsername.values())
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 5);
+    // Get the 5 most recently added players (based on first appearance)
+    // but return their latest stats
+    const recentlyAdded = Array.from(firstAppearance.entries())
+      .sort((a, b) => new Date(b[1].created_at).getTime() - new Date(a[1].created_at).getTime())
+      .slice(0, 5)
+      .map(([lowerUsername, firstSearch]) => {
+        return latestSnapshot.get(lowerUsername)!;
+      });
 
     return NextResponse.json({
-      totalPlayers: latestUpdates.size,
-      recentPlayers: combinedSnapshots
+      totalPlayers: firstAppearance.size,
+      recentPlayers: recentlyAdded
     });
   } catch (err: any) {
     console.error("Error in getTrackingStats:", err);
