@@ -157,6 +157,29 @@ async function calculateXpGained(username, newStats) {
   return Math.max(0, newOverall - oldOverall);
 }
 
+async function savePlayerStats(username, stats) {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/api/saveStats`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`
+      },
+      body: JSON.stringify({ username, stats, isAutomatedUpdate: true })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to save stats: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error(`Error saving stats for ${username}:`, error);
+    throw error;
+  }
+}
+
 async function updateAllPlayers() {
   try {
     // Get list of unique usernames from snapshots table
@@ -191,23 +214,22 @@ async function updateAllPlayers() {
           return;
         }
         
-        // Calculate XP gained
-        const xpGained = await calculateXpGained(username, stats);
-        metrics.totalXpGained += xpGained;
+        // Save stats using the API endpoint
+        const result = await savePlayerStats(username, stats);
+        console.log(`Save result for ${username}:`, result);
 
-        // Save new snapshot
-        const { error: saveError } = await supabase
-          .from('snapshots')
-          .insert([{ username, stats }]);
-          
-        if (saveError) {
-          console.error(`Error saving ${username}:`, saveError);
-          metrics.failedUpdates++;
-          return;
+        if (result.message === "New snapshot created") {
+          metrics.successfulUpdates++;
+          // Calculate XP gained from the result
+          const oldOverall = result.snapshot?.stats?.find(s => s.type === 0)?.value || 0;
+          const newOverall = stats.find(s => s.type === 0)?.value || 0;
+          const xpGained = Math.max(0, newOverall - oldOverall);
+          metrics.totalXpGained += xpGained;
+          console.log(`Successfully updated ${username} (+${xpGained} XP)`);
+        } else {
+          metrics.skippedPlayers++;
+          console.log(`Skipped ${username}: ${result.message}`);
         }
-        
-        console.log(`Successfully updated ${username} (+${xpGained} XP)`);
-        metrics.successfulUpdates++;
       } catch (error) {
         console.error(`Error processing ${username}:`, error);
         metrics.failedUpdates++;

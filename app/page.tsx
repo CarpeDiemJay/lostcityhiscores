@@ -194,7 +194,7 @@ export default function Home() {
             return fetch('/api/saveStats', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ username: searchUsername, stats: json })
+              body: JSON.stringify({ username: searchUsername, stats: json, isAutomatedUpdate: false })
             }).then(() => json);
           })
           .then((json: SkillData[]) => {
@@ -238,7 +238,7 @@ export default function Home() {
       await fetch('/api/saveStats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, stats: json })
+        body: JSON.stringify({ username, stats: json, isAutomatedUpdate: false })
       });
 
       setData(json);
