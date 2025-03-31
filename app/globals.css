@@ -21,8 +21,33 @@
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+html, body, main, #root-layout, #root-layout-main, .sidebar-container, .main-content {
+  background-color: #0A0B0F;
+}
+
+html, body {
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  color: white;
+  overflow-x: hidden;
+}
+
+#root-layout {
+  min-height: 100vh;
+  position: relative;
+}
+
+.sidebar-container {
+  background-color: #0A0B0F;
+  z-index: 40;
+}
+
+@media (min-width: 768px) {
+  .main-content {
+    margin-left: 50px;
+    transition: margin-left 0.3s ease;
+    position: relative;
+    z-index: 10;
+  }
 }
