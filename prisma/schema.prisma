@@ -1,0 +1,18 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("NEXT_PUBLIC_SUPABASE_URL")
+}
+
+model snapshots {
+  id         String   @id @default(cuid())
+  username   String
+  created_at DateTime @default(now())
+  stats      Json     // Store all skill data as JSON
+
+  @@index([username])
+  @@index([created_at])
+} 
