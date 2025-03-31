@@ -9,7 +9,7 @@ interface SkillData {
 }
 
 interface Snapshot {
-  id: number;
+  id: string;
   username: string;
   created_at: string;
   stats: SkillData[];
@@ -28,51 +28,69 @@ export async function GET() {
 
   try {
     console.log('Fetching tracking stats...');
-
-    // Get all usernames using pagination to bypass the 1000 row limit
-    let allUsernames: string[] = [];
-    let page = 0;
-    const pageSize = 1000;
     
-    while (true) {
+    // Get all usernames with pagination to handle potential >1000 record limits
+    const allUsernames: string[] = [];
+    const pageSize = 1000;
+    let hasMore = true;
+    let currentPage = 0;
+    
+    while (hasMore) {
       const { data, error } = await supabase
         .from('snapshots')
         .select('username')
-        .range(page * pageSize, (page + 1) * pageSize - 1)
-        .throwOnError();
-
-      if (error) {
-        console.error('Error getting player data:', error);
-        throw error;
+        .range(currentPage * pageSize, (currentPage + 1) * pageSize - 1);
+        
+      if (error) throw error;
+      
+      if (!data || data.length === 0) {
+        hasMore = false;
+      } else {
+        // Extract usernames and add to collection (convert to lowercase)
+        data.forEach(item => allUsernames.push(item.username.toLowerCase()));
+        currentPage++;
       }
+    }
+    
+    // Count unique usernames (already converted to lowercase above)
+    const uniqueCount = new Set(allUsernames).size;
+    console.log(`Total records processed: ${allUsernames.length}, Unique players: ${uniqueCount}`);
+    
+    // You'll need to create this stored procedure in your Supabase instance
+    // using the exact SQL query you've verified works
+    const { data: newestPlayer, error: newestPlayerError } = await supabase
+      .rpc('get_most_recent_new_player');
 
-      if (!data || data.length === 0) break;
-
-      allUsernames = allUsernames.concat(data.map(row => row.username));
-      if (data.length < pageSize) break;
-      page++;
+    if (newestPlayerError) {
+      console.error("Error fetching newest player:", newestPlayerError);
+      
+      // Fallback to getting the most recent snapshot if stored procedure fails
+      const { data: latestPlayer, error: latestPlayerError } = await supabase
+        .from('snapshots')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1);
+        
+      if (latestPlayerError) throw latestPlayerError;
+      
+      return NextResponse.json({
+        totalPlayers: uniqueCount,
+        recentPlayers: latestPlayer
+      }, {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
     }
 
-    // Count unique usernames (case insensitive)
-    const uniqueUsernames = new Set(allUsernames.map(username => username.toLowerCase()));
-    const totalPlayers = uniqueUsernames.size;
-    console.log('Total unique players:', totalPlayers);
-    console.log('Unique usernames:', Array.from(uniqueUsernames).sort());
-    console.log('Total snapshots:', allUsernames.length);
-
-    // Get the most recent snapshot
-    const { data: latestData, error: latestError } = await supabase
-      .from('snapshots')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .throwOnError();
-
-    if (latestError) throw latestError;
+    // Ensure we return an array
+    const playerArray = Array.isArray(newestPlayer) ? newestPlayer : [newestPlayer];
 
     return NextResponse.json({
-      totalPlayers,
-      recentPlayers: latestData || []
+      totalPlayers: uniqueCount,
+      recentPlayers: playerArray
     }, {
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',

@@ -31,6 +31,7 @@ let metrics = {
   skippedPlayers: 0,
   totalXpGained: 0,
   startTime: Date.now(),
+  mostRecentNewPlayer: null  // Track the most recently added new player
 };
 
 async function sleep(ms) {
@@ -159,6 +160,14 @@ async function calculateXpGained(username, newStats) {
 
 async function savePlayerStats(username, stats) {
   try {
+    // Check if this is a new player
+    const { data: existingSnapshots, error: checkError } = await supabase
+      .from('snapshots')
+      .select('count')
+      .eq('username', username);
+
+    const isNewPlayer = !existingSnapshots || existingSnapshots.length === 0;
+
     // Check last update time and apply restrictions for automated updates
     const { data: lastSnapshot } = await supabase
       .from('snapshots')
@@ -176,7 +185,8 @@ async function savePlayerStats(username, stats) {
         return { 
           success: true, 
           snapshot: lastSnapshot[0],
-          message: "Using recent snapshot" 
+          message: "Using recent snapshot",
+          isNewPlayer: false
         };
       }
 
@@ -189,7 +199,8 @@ async function savePlayerStats(username, stats) {
         return { 
           success: true, 
           snapshot: lastSnapshot[0],
-          message: "No XP gained" 
+          message: "No XP gained",
+          isNewPlayer: false
         };
       }
     }
@@ -205,10 +216,20 @@ async function savePlayerStats(username, stats) {
       throw error;
     }
 
+    // If this is a new player, update our metrics
+    if (isNewPlayer) {
+      metrics.mostRecentNewPlayer = {
+        username,
+        stats,
+        timestamp: new Date()
+      };
+    }
+
     return { 
       success: true, 
       snapshot: data?.[0],
-      message: "New snapshot created" 
+      message: "New snapshot created",
+      isNewPlayer
     };
   } catch (error) {
     console.error(`Error saving stats for ${username}:`, error);
@@ -262,6 +283,10 @@ async function updateAllPlayers() {
           const xpGained = Math.max(0, newOverall - oldOverall);
           metrics.totalXpGained += xpGained;
           console.log(`Successfully updated ${username} (+${xpGained} XP)`);
+          
+          if (result.isNewPlayer) {
+            console.log(`New player added: ${username}`);
+          }
         } else {
           metrics.skippedPlayers++;
           console.log(`Skipped ${username}: ${result.message}`);
@@ -285,6 +310,9 @@ async function updateAllPlayers() {
     console.log(`- Failed updates: ${metrics.failedUpdates}`);
     console.log(`- Skipped players: ${metrics.skippedPlayers}`);
     console.log(`- Total XP gained: ${metrics.totalXpGained.toLocaleString()}`);
+    if (metrics.mostRecentNewPlayer) {
+      console.log(`- Most recent new player: ${metrics.mostRecentNewPlayer.username} (added ${metrics.mostRecentNewPlayer.timestamp.toISOString()})`);
+    }
     
     // Exit with error if success rate is too low
     const successRate = metrics.successfulUpdates / (metrics.totalPlayers - metrics.skippedPlayers);
