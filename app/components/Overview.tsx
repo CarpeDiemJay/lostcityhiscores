@@ -225,12 +225,12 @@ export function Overview({ initialUsername = '', initialCompareUsername = '' }: 
             exit={{ opacity: 0 }}
           >
             {/* Tabs with Player Name */}
-            <div className="flex items-center justify-between mb-8 border-b border-blue-500/20">
-              <div className="flex space-x-1">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between mb-8 border-b border-blue-500/20">
+              <div className="flex flex-wrap gap-1 mb-4 sm:mb-0">
                 <motion.button
                   whileHover={{ backgroundColor: "rgba(59, 130, 246, 0.1)" }}
                   onClick={() => setActiveTab('overview')}
-                  className={`px-6 py-3 text-sm font-medium rounded-t-lg transition-colors ${
+                  className={`px-4 sm:px-6 py-2 sm:py-3 text-sm font-medium rounded-t-lg transition-colors ${
                     activeTab === 'overview'
                       ? 'bg-blue-500/10 text-blue-400 border-b-2 border-blue-500'
                       : 'text-gray-400 hover:text-blue-400'
@@ -241,7 +241,7 @@ export function Overview({ initialUsername = '', initialCompareUsername = '' }: 
                 <motion.button
                   whileHover={{ backgroundColor: "rgba(59, 130, 246, 0.1)" }}
                   onClick={() => setActiveTab('tracker')}
-                  className={`px-6 py-3 text-sm font-medium rounded-t-lg transition-colors ${
+                  className={`px-4 sm:px-6 py-2 sm:py-3 text-sm font-medium rounded-t-lg transition-colors ${
                     activeTab === 'tracker'
                       ? 'bg-blue-500/10 text-blue-400 border-b-2 border-blue-500'
                       : 'text-gray-400 hover:text-blue-400'
@@ -252,7 +252,7 @@ export function Overview({ initialUsername = '', initialCompareUsername = '' }: 
                 <motion.button
                   whileHover={{ backgroundColor: "rgba(59, 130, 246, 0.1)" }}
                   onClick={() => setActiveTab('compare')}
-                  className={`px-6 py-3 text-sm font-medium rounded-t-lg transition-colors ${
+                  className={`px-4 sm:px-6 py-2 sm:py-3 text-sm font-medium rounded-t-lg transition-colors ${
                     activeTab === 'compare'
                       ? 'bg-blue-500/10 text-blue-400 border-b-2 border-blue-500'
                       : 'text-gray-400 hover:text-blue-400'
@@ -261,8 +261,8 @@ export function Overview({ initialUsername = '', initialCompareUsername = '' }: 
                   Compare
                 </motion.button>
               </div>
-              <div className="px-6 py-3">
-                <h2 className="text-lg font-bold text-blue-400">{username}</h2>
+              <div className="px-4 sm:px-6 py-2 sm:py-3 max-w-full">
+                <h2 className="text-lg font-bold text-blue-400 truncate">{username}</h2>
               </div>
             </div>
 
@@ -333,7 +333,7 @@ export function Overview({ initialUsername = '', initialCompareUsername = '' }: 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
-                  className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+                  className="space-y-6"
                 >
                   <div className="mb-8">
                     <div className="flex items-center gap-4 mb-4">
@@ -375,56 +375,7 @@ export function Overview({ initialUsername = '', initialCompareUsername = '' }: 
                     )}
                   </div>
                   <AnimatePresence mode="wait">
-                    {compareLoading ? (
-                      <motion.div
-                        key="loading"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="space-y-6"
-                      >
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="bg-[#0F172A] rounded-xl p-6 animate-pulse">
-                            <div className="h-6 w-32 bg-blue-500/20 rounded mb-4"></div>
-                            <div className="space-y-4">
-                              <div>
-                                <div className="h-4 w-24 bg-gray-500/20 rounded mb-2"></div>
-                                <div className="h-8 w-40 bg-gray-500/20 rounded"></div>
-                              </div>
-                              <div>
-                                <div className="h-4 w-24 bg-gray-500/20 rounded mb-2"></div>
-                                <div className="h-8 w-40 bg-gray-500/20 rounded"></div>
-                              </div>
-                              <div>
-                                <div className="h-4 w-24 bg-gray-500/20 rounded mb-2"></div>
-                                <div className="h-8 w-40 bg-gray-500/20 rounded"></div>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="bg-[#0F172A] rounded-xl p-6 animate-pulse">
-                            <div className="h-6 w-32 bg-blue-500/20 rounded mb-4"></div>
-                            <div className="space-y-4">
-                              <div>
-                                <div className="h-4 w-24 bg-gray-500/20 rounded mb-2"></div>
-                                <div className="h-8 w-40 bg-gray-500/20 rounded"></div>
-                              </div>
-                              <div>
-                                <div className="h-4 w-24 bg-gray-500/20 rounded mb-2"></div>
-                                <div className="h-8 w-40 bg-gray-500/20 rounded"></div>
-                              </div>
-                              <div>
-                                <div className="h-4 w-24 bg-gray-500/20 rounded mb-2"></div>
-                                <div className="h-8 w-40 bg-gray-500/20 rounded"></div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="bg-[#0F172A] rounded-xl p-6 h-[400px] animate-pulse">
-                          <div className="h-6 w-48 bg-blue-500/20 rounded mb-4"></div>
-                          <div className="h-full bg-gray-500/20 rounded"></div>
-                        </div>
-                      </motion.div>
-                    ) : compareData ? (
+                    {compareData && (
                       <motion.div
                         key="content"
                         initial={{ opacity: 0, y: 20 }}
@@ -432,27 +383,55 @@ export function Overview({ initialUsername = '', initialCompareUsername = '' }: 
                         exit={{ opacity: 0, y: -20 }}
                         className="space-y-6"
                       >
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative">
                           <motion.div
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.2 }}
-                            className="bg-[#0F172A] rounded-xl p-6"
+                            className="bg-[#0F172A] rounded-xl p-4 sm:p-6 relative border-2 border-blue-500/20"
                           >
-                            {/* Main player stats */}
-                            <h4 className="text-blue-400 text-lg font-medium mb-4">{username}</h4>
+                            <div className="absolute top-0 right-0 bg-blue-500/10 text-blue-400 px-3 py-1 rounded-bl-lg rounded-tr-lg text-sm font-medium">
+                              Rank #{data?.find(skill => skill.type === 0)?.rank.toLocaleString() || '?'}
+                            </div>
+                            <h4 className="text-blue-400 text-lg font-medium mb-4 truncate pt-8">{username}</h4>
                             <div className="space-y-4">
                               <div>
                                 <div className="text-gray-400 text-sm">Total Level</div>
-                                <div className="text-2xl font-semibold text-white">{data?.find(skill => skill.type === 0)?.level || 0}</div>
+                                <div className="text-xl sm:text-2xl font-semibold text-white flex items-baseline gap-2">
+                                  {data?.find(skill => skill.type === 0)?.level || 0}
+                                  {(() => {
+                                    const mainLevel = data?.find(skill => skill.type === 0)?.level || 0;
+                                    const compareLevel = compareData.find(skill => skill.type === 0)?.level || 0;
+                                    const diff = mainLevel - compareLevel;
+                                    if (diff === 0) return null;
+                                    return (
+                                      <span className={`text-sm font-medium ${diff > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                        ({diff > 0 ? '+' : ''}{diff})
+                                      </span>
+                                    );
+                                  })()}
+                                </div>
                               </div>
                               <div>
                                 <div className="text-gray-400 text-sm">Total XP</div>
-                                <div className="text-2xl font-semibold text-white">{Math.floor((data?.find(skill => skill.type === 0)?.value || 0) / 10).toLocaleString()}</div>
+                                <div className="text-xl sm:text-2xl font-semibold text-white flex items-baseline gap-2">
+                                  {Math.floor((data?.find(skill => skill.type === 0)?.value || 0) / 10).toLocaleString()}
+                                  {(() => {
+                                    const mainXP = Math.floor((data?.find(skill => skill.type === 0)?.value || 0) / 10);
+                                    const compareXP = Math.floor((compareData.find(skill => skill.type === 0)?.value || 0) / 10);
+                                    const diff = mainXP - compareXP;
+                                    if (diff === 0) return null;
+                                    return (
+                                      <span className={`text-sm font-medium ${diff > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                        ({diff > 0 ? '+' : ''}{diff.toLocaleString()})
+                                      </span>
+                                    );
+                                  })()}
+                                </div>
                               </div>
                               <div>
-                                <div className="text-gray-400 text-sm">Weekly Gain</div>
-                                <div className={`text-2xl font-semibold ${mainPlayerHistory.weeklyGain > comparePlayerHistory.weeklyGain ? 'text-green-400' : mainPlayerHistory.weeklyGain < comparePlayerHistory.weeklyGain ? 'text-red-400' : 'text-white'}`}>
+                                <div className="text-gray-400 text-sm">Weekly Progression</div>
+                                <div className={`text-xl sm:text-2xl font-semibold ${mainPlayerHistory.weeklyGain > comparePlayerHistory.weeklyGain ? 'text-green-400' : mainPlayerHistory.weeklyGain < comparePlayerHistory.weeklyGain ? 'text-red-400' : 'text-white'}`}>
                                   {mainPlayerHistory.weeklyGain.toLocaleString()} XP
                                   {mainPlayerHistory.weeklyGain !== comparePlayerHistory.weeklyGain && (
                                     <span className={`text-sm ml-2 ${mainPlayerHistory.weeklyGain > comparePlayerHistory.weeklyGain ? 'text-green-400' : 'text-red-400'}`}>
@@ -464,56 +443,62 @@ export function Overview({ initialUsername = '', initialCompareUsername = '' }: 
                               </div>
                             </div>
                           </motion.div>
+
+                          {/* VS Badge */}
+                          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 hidden sm:block">
+                            <div className="bg-red-500 text-white text-2xl font-bold rounded-full w-12 h-12 flex items-center justify-center shadow-lg border-2 border-red-400">
+                              VS
+                            </div>
+                          </div>
+
                           <motion.div
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.2 }}
-                            className="bg-[#0F172A] rounded-xl p-6"
+                            className="bg-[#0F172A] rounded-xl p-4 sm:p-6 relative border-2 border-red-500/20"
                           >
-                            {/* Compare player stats */}
-                            <h4 className="text-blue-400 text-lg font-medium mb-4">{compareUsername}</h4>
+                            <div className="absolute top-0 right-0 bg-red-500/10 text-red-400 px-3 py-1 rounded-bl-lg rounded-tr-lg text-sm font-medium">
+                              Rank #{compareData?.find(skill => skill.type === 0)?.rank.toLocaleString() || '?'}
+                            </div>
+                            <h4 className="text-red-400 text-lg font-medium mb-4 truncate pt-8">{compareUsername}</h4>
                             <div className="space-y-4">
                               <div>
                                 <div className="text-gray-400 text-sm">Total Level</div>
-                                <div className="flex items-start">
-                                  <div className="text-2xl font-semibold text-white">
-                                    {compareData.find(skill => skill.type === 0)?.level || 0}
-                                  </div>
+                                <div className="text-xl sm:text-2xl font-semibold text-white flex items-baseline gap-2">
+                                  {compareData.find(skill => skill.type === 0)?.level || 0}
                                   {(() => {
                                     const mainLevel = data?.find(skill => skill.type === 0)?.level || 0;
                                     const compareLevel = compareData.find(skill => skill.type === 0)?.level || 0;
                                     const diff = compareLevel - mainLevel;
                                     if (diff === 0) return null;
                                     return (
-                                      <div className={`ml-2 mt-1.5 text-xs font-medium ${diff > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                        {diff > 0 ? '+' : ''}{diff}
-                                      </div>
+                                      <span className={`text-sm font-medium ${diff > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                        ({diff > 0 ? '+' : ''}{diff})
+                                      </span>
                                     );
                                   })()}
                                 </div>
                               </div>
                               <div>
                                 <div className="text-gray-400 text-sm">Total XP</div>
-                                <div className="flex items-start">
-                                  <div className="text-2xl font-semibold text-white">
-                                    {Math.floor((compareData.find(skill => skill.type === 0)?.value || 0) / 10).toLocaleString()}
-                                  </div>
+                                <div className="text-xl sm:text-2xl font-semibold text-white flex items-baseline gap-2">
+                                  {Math.floor((compareData.find(skill => skill.type === 0)?.value || 0) / 10).toLocaleString()}
                                   {(() => {
                                     const mainXP = Math.floor((data?.find(skill => skill.type === 0)?.value || 0) / 10);
                                     const compareXP = Math.floor((compareData.find(skill => skill.type === 0)?.value || 0) / 10);
                                     const diff = compareXP - mainXP;
                                     if (diff === 0) return null;
                                     return (
-                                      <div className={`ml-2 mt-1.5 text-xs font-medium ${diff > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                        {diff > 0 ? '+' : ''}{diff.toLocaleString()}
-                                      </div>
+                                      <span className={`text-sm font-medium ${diff > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                        ({diff > 0 ? '+' : ''}{diff.toLocaleString()})
+                                      </span>
                                     );
                                   })()}
                                 </div>
                               </div>
                               <div>
-                                <div className="text-gray-400 text-sm">Weekly Gain</div>
-                                <div className={`text-2xl font-semibold ${comparePlayerHistory.weeklyGain > mainPlayerHistory.weeklyGain ? 'text-green-400' : comparePlayerHistory.weeklyGain < mainPlayerHistory.weeklyGain ? 'text-red-400' : 'text-white'}`}>
+                                <div className="text-gray-400 text-sm">Weekly Progression</div>
+                                <div className={`text-xl sm:text-2xl font-semibold ${comparePlayerHistory.weeklyGain > mainPlayerHistory.weeklyGain ? 'text-green-400' : comparePlayerHistory.weeklyGain < mainPlayerHistory.weeklyGain ? 'text-red-400' : 'text-white'}`}>
                                   {comparePlayerHistory.weeklyGain.toLocaleString()} XP
                                   {mainPlayerHistory.weeklyGain !== comparePlayerHistory.weeklyGain && (
                                     <span className={`text-sm ml-2 ${comparePlayerHistory.weeklyGain > mainPlayerHistory.weeklyGain ? 'text-green-400' : 'text-red-400'}`}>
@@ -526,6 +511,14 @@ export function Overview({ initialUsername = '', initialCompareUsername = '' }: 
                             </div>
                           </motion.div>
                         </div>
+
+                        {/* Mobile VS Badge */}
+                        <div className="sm:hidden flex justify-center -mt-2 -mb-4 relative z-10">
+                          <div className="bg-red-500 text-white text-xl font-bold rounded-full w-10 h-10 flex items-center justify-center shadow-lg border-2 border-red-400">
+                            VS
+                          </div>
+                        </div>
+
                         <motion.div
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -554,7 +547,7 @@ export function Overview({ initialUsername = '', initialCompareUsername = '' }: 
                           )}
                         </motion.div>
                       </motion.div>
-                    ) : null}
+                    )}
                   </AnimatePresence>
                 </motion.div>
               ) : (

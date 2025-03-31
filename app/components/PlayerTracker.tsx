@@ -455,13 +455,13 @@ export default function PlayerTracker({ username, playerData }: PlayerTrackerPro
         </div>
       </div>
 
-      {/* Experience Timeline */}
+      {/* XP Progression */}
       <div className="bg-[#111827]/90 backdrop-blur-sm rounded-xl border border-blue-500/20 p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 mb-6">
           <div>
-            <h2 className="text-xl font-bold text-blue-400 mb-2">Experience Timeline</h2>
+            <h2 className="text-xl font-bold text-blue-400 mb-2">XP Progression</h2>
             <div className="text-sm text-gray-400">
-              Track your progression over time with our detailed experience timeline. This chart visualizes your total XP gains, helping you monitor your growth and achievements.
+              Track your progression over time with our detailed XP progression chart. This chart visualizes your total XP gains, helping you monitor your growth and achievements.
             </div>
           </div>
           <TimeRangeFilter />

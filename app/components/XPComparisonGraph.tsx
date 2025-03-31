@@ -75,7 +75,7 @@ export default function XPComparisonGraph({
   const getGainLabel = () => {
     switch (timeRange) {
       case '24h':
-        return 'Daily';
+        return '24-Hour';
       case '7d':
         return 'Weekly';
       case '30d':
@@ -178,33 +178,19 @@ export default function XPComparisonGraph({
   });
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <h3 className="text-lg font-medium text-blue-400">XP Progression Comparison</h3>
-          <div className="flex items-baseline gap-2">
-            <span className="text-sm text-gray-400">{getGainLabel()} Gain:</span>
-            <span className="text-sm font-medium text-white">{mainPlayerData.username}: {mainPlayerGain.toLocaleString()}</span>
-            <span className="text-xs text-gray-400 ml-2">{comparePlayerData.username}: {comparePlayerGain.toLocaleString()}</span>
-            {gainDifference !== 0 && (
-              <span className={`text-xs font-medium ${gainDifference > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                ({gainDifference > 0 ? '+' : ''}{gainDifference.toLocaleString()})
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center space-x-2">
-          <select
-            value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
-            className="bg-[#1E293B] text-white text-sm rounded-lg px-3 py-1.5 border border-blue-500/20 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-          >
-            <option value="24h">Last 24 hours</option>
-            <option value="7d">Last 7 days</option>
-            <option value="30d">Last 30 days</option>
-            <option value="90d">Last 90 days</option>
-          </select>
-        </div>
+    <div className="p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h3 className="text-lg font-medium text-blue-400">XP Progression</h3>
+        <select
+          value={timeRange}
+          onChange={(e) => setTimeRange(e.target.value)}
+          className="bg-gray-800 rounded-lg px-4 py-2 text-white border border-gray-700 focus:outline-none focus:border-blue-500"
+        >
+          <option value="24h">Last 24 hours</option>
+          <option value="7d">Last 7 days</option>
+          <option value="30d">Last 30 days</option>
+          <option value="90d">Last 90 days</option>
+        </select>
       </div>
       <div className="h-[400px] bg-[#0F172A] rounded-xl p-4">
         <ResponsiveContainer width="100%" height="100%">
@@ -213,16 +199,20 @@ export default function XPComparisonGraph({
             <XAxis
               dataKey="date"
               stroke="#94A3B8"
-              tick={{ fill: '#94A3B8' }}
+              tick={{ fill: '#94A3B8', fontSize: 11 }}
               tickLine={{ stroke: '#94A3B8' }}
-              minTickGap={30}
+              minTickGap={20}
+              angle={-30}
+              textAnchor="end"
+              height={50}
             />
             <YAxis
               stroke="#94A3B8"
-              tick={{ fill: '#94A3B8' }}
+              tick={{ fill: '#94A3B8', fontSize: 11 }}
               tickLine={{ stroke: '#94A3B8' }}
               tickFormatter={(value) => `${Math.round(value / 1000000)}M`}
               domain={['auto', 'auto']}
+              width={45}
             />
             <Tooltip
               contentStyle={{
@@ -230,14 +220,17 @@ export default function XPComparisonGraph({
                 border: 'none',
                 borderRadius: '0.5rem',
                 color: '#F8FAFC',
+                fontSize: '12px',
+                padding: '8px'
               }}
-              labelStyle={{ color: '#94A3B8' }}
+              labelStyle={{ color: '#94A3B8', fontSize: '11px' }}
               formatter={(value: number) => [value.toLocaleString(), 'XP']}
             />
             <Legend
               wrapperStyle={{
                 paddingTop: '1rem',
                 color: '#94A3B8',
+                fontSize: '12px'
               }}
             />
             <Line

@@ -159,21 +159,57 @@ async function calculateXpGained(username, newStats) {
 
 async function savePlayerStats(username, stats) {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/api/saveStats`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`
-      },
-      body: JSON.stringify({ username, stats, isAutomatedUpdate: true })
-    });
+    // Check last update time and apply restrictions for automated updates
+    const { data: lastSnapshot } = await supabase
+      .from('snapshots')
+      .select('*')
+      .eq('username', username)
+      .order('created_at', { ascending: false })
+      .limit(1);
 
-    if (!response.ok) {
-      throw new Error(`Failed to save stats: ${response.status}`);
+    if (lastSnapshot?.length) {
+      const lastUpdate = new Date(lastSnapshot[0].created_at);
+      const minutesSinceUpdate = (Date.now() - lastUpdate.getTime()) / (1000 * 60);
+      
+      // If it's been less than MIN_UPDATE_INTERVAL minutes, return the existing snapshot
+      if (minutesSinceUpdate < MIN_UPDATE_INTERVAL) {
+        return { 
+          success: true, 
+          snapshot: lastSnapshot[0],
+          message: "Using recent snapshot" 
+        };
+      }
+
+      // Calculate XP gained
+      const oldOverall = lastSnapshot[0].stats.find(s => s.type === 0)?.value || 0;
+      const newOverall = stats.find(s => s.type === 0)?.value || 0;
+      
+      // If no XP gained, return existing snapshot
+      if (newOverall <= oldOverall) {
+        return { 
+          success: true, 
+          snapshot: lastSnapshot[0],
+          message: "No XP gained" 
+        };
+      }
     }
 
-    const result = await response.json();
-    return result;
+    // Insert new snapshot
+    const { data, error } = await supabase
+      .from('snapshots')
+      .insert([{ username, stats }])
+      .select('*');
+
+    if (error) {
+      console.error("Supabase insert error:", error);
+      throw error;
+    }
+
+    return { 
+      success: true, 
+      snapshot: data?.[0],
+      message: "New snapshot created" 
+    };
   } catch (error) {
     console.error(`Error saving stats for ${username}:`, error);
     throw error;
