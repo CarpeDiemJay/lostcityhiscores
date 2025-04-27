@@ -68,13 +68,20 @@ export default function TrackingStats() {
       try {
         const res = await fetch('/api/getTrackingStats');
         if (!res.ok) {
-          throw new Error('Failed to fetch tracking stats');
+          const errorData = await res.json();
+          throw new Error(errorData.error || 'Failed to fetch tracking stats');
         }
         const data = await res.json();
+        
+        if (!data.totalPlayers || !data.recentPlayers || data.recentPlayers.length === 0) {
+          console.error('Invalid data format received:', data);
+          throw new Error('Received invalid data format from tracking stats API');
+        }
+        
         setStats(data);
       } catch (err) {
         console.error('Error fetching tracking stats:', err);
-        setError('Failed to load tracking statistics');
+        setError(err instanceof Error ? err.message : 'Failed to load tracking statistics');
       }
     }
 
@@ -164,7 +171,7 @@ export default function TrackingStats() {
               {latestPlayer.username}
             </Link>
             <div className="text-xs text-gray-500 mt-1">
-              {timeAgo(new Date(latestPlayer.created_at))}
+              First tracked {timeAgo(new Date(latestPlayer.created_at))}
             </div>
           </motion.div>
 
