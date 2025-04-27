@@ -251,28 +251,32 @@ export default function PlayerTracker({ username, playerData }: PlayerTrackerPro
           rankDiff
         });
 
-        // Include in gains if there's any XP gain or rank change
-        if (xpDiff !== 0 || rankDiff !== 0) {
-          gains.push({
-            skillType: newStat.type,
-            oldXP,
-            newXP,
-            xpDiff,
-            oldLevel: oldStat.level,
-            newLevel: newStat.level,
-            levelDiff: newStat.level - oldStat.level,
-            rankDiff,
-            currentRank: newStat.rank
-          });
+        // Include all skills, not just those with changes
+        gains.push({
+          skillType: newStat.type,
+          oldXP,
+          newXP,
+          xpDiff,
+          oldLevel: oldStat.level,
+          newLevel: newStat.level,
+          levelDiff: newStat.level - oldStat.level,
+          rankDiff,
+          currentRank: newStat.rank
+        });
 
-          if (newStat.type === 0) {
-            overallGain = xpDiff;
-          }
+        if (newStat.type === 0) {
+          overallGain = xpDiff;
         }
       });
     }
 
-    gains.sort((a, b) => b.xpDiff - a.xpDiff);
+    // Sort skills by type to ensure consistent ordering, except keep overall at the top
+    gains.sort((a, b) => {
+      if (a.skillType === 0) return -1;
+      if (b.skillType === 0) return 1;
+      return a.skillType - b.skillType;
+    });
+    
     setSkillGains(gains);
     setXpGained(overallGain);
 
@@ -415,9 +419,9 @@ export default function PlayerTracker({ username, playerData }: PlayerTrackerPro
                     </td>
                     <td className="py-1 px-2 text-right tabular-nums">
                       {gain.levelDiff > 0 ? (
-                        <span className="text-green-400">+{gain.levelDiff}</span>
+                        <span className="text-green-400">+{gain.levelDiff} <span className="text-gray-400">({gain.newLevel})</span></span>
                       ) : (
-                        '0'
+                        <span className="text-gray-400">{gain.newLevel}</span>
                       )}
                     </td>
                     <td className="py-1 px-2 text-right tabular-nums">
